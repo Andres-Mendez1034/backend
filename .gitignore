@@ -1,7 +1,12 @@
-# Dependencies
+# 🔐 ENV (CRÍTICO)
+.env
+.env.*
+!.env.example
+
+# 📦 Dependencies
 node_modules/
 
-# Logs
+# 🧾 Logs
 logs/
 *.log
 npm-debug.log*
@@ -9,30 +14,44 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Runtime data
+# ⚙️ Runtime
 pids/
 *.pid
 *.seed
 *.pid.lock
 
-# Coverage (tests)
+# 🧪 Testing / Coverage
 coverage/
 
-# Build outputs
+# 🏗️ Build
 dist/
 build/
 
-# OS files
+# 🗂️ Cache
+.cache/
+.parcel-cache/
+.tmp/
+.temp/
+
+# 🖥️ OS
 .DS_Store
 Thumbs.db
 
-# Editor folders
+# 🧑‍💻 Editor
 .vscode/
 .idea/
 
-# Optional caches
-.cache/
-.parcel-cache/
-
-# TypeScript
+# 🔷 TypeScript
 *.tsbuildinfo
+
+# 🐳 Docker (si usas)
+.dockerignore
+
+# 🔑 Certificados / claves
+*.pem
+*.key
+*.crt
+
+# 📁 Archivos sensibles comunes
+secrets.json
+config.local.js
