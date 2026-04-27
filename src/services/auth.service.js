@@ -1,95 +1,96 @@
-import { supabase } from "../config/supabaseClient.js"
-import bcrypt from "bcrypt"
+import db from "../config/db.js";
+import bcrypt from "bcrypt";
 
-// ==========================
-// CONFIG
-// ==========================
-const SALT_ROUNDS = 10
+const SALT_ROUNDS = 10;
 
-// ==========================
-// REGISTER USER
-// ==========================
-export const registerUser = async ({ email, password, role }) => {
-    console.log("HASHING PASSWORD...");
-  if (!email || !password || !role) {
-    throw new Error("Missing fields")
+/* =========================================================
+   REGISTER USER
+========================================================= */
+export const registerUser = async ({ email, password, name, role }) => {
+  console.log("\n================ REGISTER SERVICE ================");
+  console.log("📩 Email:", email);
+  console.log("👤 Name:", name);
+  console.log("🎭 Role:", role);
+
+  if (!email || !password || !name || !role) {
+    console.log("❌ VALIDATION ERROR: Missing fields");
+    throw new Error("Missing fields");
   }
 
-  // 🔍 Verificar si ya existe
-  const { data: existingUser } = await supabase
-    .from("users")
-    .select("id")
-    .eq("email", email)
-    .single()
+  console.log("🔎 Checking existing user...");
 
-  if (existingUser) {
-    throw new Error("User already exists")
+  const existing = await db.query(
+    `SELECT id, email FROM users WHERE email = $1`,
+    [email]
+  );
+
+  if (existing.rows.length > 0) {
+    console.log("⚠️ USER ALREADY EXISTS:", existing.rows[0]);
+    throw new Error("User already exists");
   }
 
-  // 🔐 Hash de contraseña
-  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS)
+  console.log("✅ User not found");
 
-  // 💾 Insertar en DB
-  const { data, error } = await supabase
-    .from("users")
-    .insert([
-      {
-        email,
-        password_hash: hashedPassword,
-        role,
-        mfa_enabled: false
-      }
-    ])
-    .select()
-    .single()
+  console.log("🔐 Hashing password...");
+  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-  if (error) throw new Error(error.message)
+  console.log("💾 Inserting user...");
 
-  return data
-}
+  const result = await db.query(
+    `INSERT INTO users (email, password_hash, name, role, mfa_enabled)
+     VALUES ($1, $2, $3, $4, false)
+     RETURNING id, email, name, role, mfa_enabled, created_at`,
+    [email, hashedPassword, name, role]
+  );
 
+  const user = result.rows[0];
 
-// ==========================
-// LOGIN USER
-// ==========================
+  console.log("🎉 USER CREATED:");
+  console.log(user);
+  console.log("================================================\n");
+
+  return user;
+};
+
+/* =========================================================
+   LOGIN USER
+========================================================= */
 export const loginUser = async ({ email, password }) => {
+  console.log("\n================ LOGIN SERVICE ================");
+  console.log("📩 Email:", email);
+
   if (!email || !password) {
-    throw new Error("Missing fields")
+    throw new Error("Missing fields");
   }
 
-  // 🔍 Buscar usuario
-  const { data: user, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("email", email)
-    .single()
+  console.log("🔎 Searching user...");
 
-  if (error || !user) {
-    throw new Error("User not found")
+  const result = await db.query(
+    `SELECT * FROM users WHERE email = $1`,
+    [email]
+  );
+
+  const user = result.rows[0];
+
+  if (!user) {
+    console.log("❌ User not found");
+    throw new Error("User not found");
   }
 
-  // 🔐 Comparar password con hash
-  const isValid = await bcrypt.compare(password, user.password_hash)
+  console.log("👤 User found");
+
+  console.log("🔐 Checking password...");
+  const isValid = await bcrypt.compare(password, user.password_hash);
 
   if (!isValid) {
-    throw new Error("Invalid credentials")
+    console.log("❌ Invalid password");
+    throw new Error("Invalid credentials");
   }
 
-  return user
-}
+  console.log("✅ Password OK");
+  console.log("================================================\n");
 
+  delete user.password_hash;
 
-// ==========================
-// GET USER BY EMAIL (helper)
-// ==========================
-export const getUserByEmail = async (email) => {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("email", email)
-    .single()
-
-  if (error) throw new Error(error.message)
-
-  return data
-}
+  return user;
+};

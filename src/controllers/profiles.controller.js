@@ -1,53 +1,74 @@
-import { supabase } from "../config/supabaseClient.js"
+import db from "../config/db.js";
 
-// ==========================
-// CREAR INFLUENCER PROFILE
-// ==========================
+/* =========================================================
+   CREAR INFLUENCER PROFILE + TAGS + TIKTOK
+========================================================= */
 export const createInfluencerProfile = async (req, res) => {
   try {
     const {
       user_id,
       full_name,
       id_number,
-      category,
-      location
-    } = req.body
+      location,
+      tiktok_url, // 🔥 NUEVO
+      tags = []
+    } = req.body;
 
     if (!user_id || !full_name || !id_number) {
-      return res.status(400).json({ error: "Missing required fields" })
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const { data, error } = await supabase
-      .from("influencer_profiles")
-      .insert([
-        {
-          user_id,
-          full_name,
-          id_number,
-          category,
-          location
-        }
-      ])
-      .select()
+    // 1. Crear perfil (FIX: category eliminado)
+    const result = await db.query(
+      `INSERT INTO influencer_profiles
+      (user_id, full_name, id_number, category, location, tiktok_url)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *`,
+      [
+        user_id,
+        full_name,
+        id_number,
+        "influencer", // 🔥 fijo (no se selecciona desde frontend)
+        location,
+        tiktok_url
+      ]
+    );
 
-    if (error) {
-      return res.status(400).json({ error: error.message })
+    const profile = result.rows[0];
+
+    // 2. Insertar tags (INTERESES)
+    if (tags && tags.length > 0) {
+      for (const tagName of tags) {
+        const tagResult = await db.query(
+          `SELECT tag_id FROM tags WHERE tag_name = $1`,
+          [tagName]
+        );
+
+        if (tagResult.rows.length > 0) {
+          await db.query(
+            `INSERT INTO profile_tags (profile_id, tag_id)
+             VALUES ($1, $2)`,
+            [profile.profile_id, tagResult.rows[0].tag_id]
+          );
+        }
+      }
     }
 
     return res.status(201).json({
       message: "Influencer profile created",
-      profile: data[0]
-    })
+      profile
+    });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message })
+    console.error("CREATE INFLUENCER ERROR:", err);
+    return res.status(500).json({ error: err.message });
   }
-}
+};
 
 
-// ==========================
-// CREAR CLIENT PROFILE
-// ==========================
+/* =========================================================
+   CREAR CLIENT PROFILE
+========================================================= */
 export const createClientProfile = async (req, res) => {
   try {
     const {
@@ -58,98 +79,102 @@ export const createClientProfile = async (req, res) => {
       location,
       awareness_level,
       main_goal
-    } = req.body
+    } = req.body;
 
     if (!user_id || !business_name || !owner_name) {
-      return res.status(400).json({ error: "Missing required fields" })
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const { data, error } = await supabase
-      .from("client_profiles")
-      .insert([
-        {
-          user_id,
-          business_name,
-          owner_name,
-          business_type,
-          location,
-          awareness_level,
-          main_goal
-        }
-      ])
-      .select()
-
-    if (error) {
-      return res.status(400).json({ error: error.message })
-    }
+    const result = await db.query(
+      `INSERT INTO client_profiles
+      (user_id, business_name, owner_name, business_type, location, awareness_level, main_goal)
+      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      RETURNING *`,
+      [
+        user_id,
+        business_name,
+        owner_name,
+        business_type,
+        location,
+        awareness_level,
+        main_goal
+      ]
+    );
 
     return res.status(201).json({
       message: "Client profile created",
-      profile: data[0]
-    })
+      profile: result.rows[0]
+    });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message })
+    console.error("CREATE CLIENT ERROR:", err);
+    return res.status(500).json({ error: err.message });
   }
-}
+};
 
 
-// ==========================
-// OBTENER PERFIL POR USER
-// ==========================
+/* =========================================================
+   OBTENER PERFIL POR USER
+========================================================= */
 export const getProfileByUser = async (req, res) => {
   try {
-    const { user_id } = req.params
+    const { user_id } = req.params;
 
-    // buscar influencer
-    const influencer = await supabase
-      .from("influencer_profiles")
-      .select("*")
-      .eq("user_id", user_id)
-      .single()
+    const influencer = await db.query(
+      `SELECT * FROM influencer_profiles WHERE user_id = $1`,
+      [user_id]
+    );
 
-    // buscar client
-    const client = await supabase
-      .from("client_profiles")
-      .select("*")
-      .eq("user_id", user_id)
-      .single()
+    const client = await db.query(
+      `SELECT * FROM client_profiles WHERE user_id = $1`,
+      [user_id]
+    );
 
     return res.json({
-      influencer: influencer.data || null,
-      client: client.data || null
-    })
+      influencer: influencer.rows[0] || null,
+      client: client.rows[0] || null
+    });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message })
+    return res.status(500).json({ error: err.message });
   }
-}
+};
 
 
-// ==========================
-// UPDATE INFLUENCER PROFILE
-// ==========================
+/* =========================================================
+   UPDATE INFLUENCER PROFILE
+========================================================= */
 export const updateInfluencerProfile = async (req, res) => {
   try {
-    const { user_id } = req.params
-    const updates = req.body
+    const { user_id } = req.params;
+    const updates = req.body;
 
-    const { data, error } = await supabase
-      .from("influencer_profiles")
-      .update(updates)
-      .eq("user_id", user_id)
-      .select()
+    const keys = Object.keys(updates);
+    const values = Object.values(updates);
 
-    if (error) {
-      return res.status(400).json({ error: error.message })
+    if (keys.length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
     }
+
+    const setQuery = keys
+      .map((key, i) => `${key} = $${i + 2}`)
+      .join(", ");
+
+    const result = await db.query(
+      `UPDATE influencer_profiles
+       SET ${setQuery}
+       WHERE user_id = $1
+       RETURNING *`,
+      [user_id, ...values]
+    );
 
     return res.json({
       message: "Profile updated",
-      profile: data[0]
-    })
+      profile: result.rows[0]
+    });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message })
+    console.error("UPDATE ERROR:", err);
+    return res.status(500).json({ error: err.message });
   }
-}
+};

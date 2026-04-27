@@ -1,81 +1,67 @@
-import { supabase } from "../config/supabaseClient.js"
+import db from "../config/db.js";
 
 // ==========================
 // GET ALL USERS
 // ==========================
 export const getAllUsers = async () => {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .order("created_at", { ascending: false })
+  const result = await db.query(
+    "SELECT * FROM users ORDER BY created_at DESC"
+  );
 
-  if (error) throw error
-
-  return data
-}
-
+  return result.rows;
+};
 
 // ==========================
 // GET USER BY ID
 // ==========================
 export const getUserById = async (id) => {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", id)
-    .single()
+  const result = await db.query(
+    "SELECT * FROM users WHERE id = $1",
+    [id]
+  );
 
-  if (error) throw error
-
-  return data
-}
-
+  return result.rows[0];
+};
 
 // ==========================
 // UPDATE USER
 // ==========================
 export const updateUser = async (id, updates) => {
-  delete updates.id
-  delete updates.email // opcional: proteger email
+  delete updates.id;
+  delete updates.email;
 
-  const { data, error } = await supabase
-    .from("users")
-    .update(updates)
-    .eq("id", id)
-    .select()
+  const keys = Object.keys(updates);
+  const values = Object.values(updates);
 
-  if (error) throw error
+  const setQuery = keys
+    .map((key, i) => `${key} = $${i + 2}`)
+    .join(", ");
 
-  return data[0]
-}
+  const result = await db.query(
+    `UPDATE users SET ${setQuery} WHERE id = $1 RETURNING *`,
+    [id, ...values]
+  );
 
+  return result.rows[0];
+};
 
 // ==========================
 // DELETE USER
 // ==========================
 export const deleteUser = async (id) => {
-  const { error } = await supabase
-    .from("users")
-    .delete()
-    .eq("id", id)
+  await db.query("DELETE FROM users WHERE id = $1", [id]);
 
-  if (error) throw error
-
-  return { message: "User deleted successfully" }
-}
-
+  return { message: "User deleted successfully" };
+};
 
 // ==========================
-// GET USER BY EMAIL (helper)
+// GET USER BY EMAIL
 // ==========================
 export const getUserByEmail = async (email) => {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("email", email)
-    .single()
+  const result = await db.query(
+    "SELECT * FROM users WHERE email = $1",
+    [email]
+  );
 
-  if (error) throw error
-
-  return data
-}
+  return result.rows[0];
+};

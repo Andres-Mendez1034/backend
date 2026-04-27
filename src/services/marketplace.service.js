@@ -1,4 +1,4 @@
-import { supabase } from "../config/supabaseClient.js"
+import db from "../config/db.js";
 
 // ==========================
 // CREATE SERVICE
@@ -11,69 +11,62 @@ export const createService = async (serviceData) => {
     price,
     is_trending,
     status
-  } = serviceData
+  } = serviceData;
 
-  const { data, error } = await supabase
-    .from("influencer_services")
-    .insert([
-      {
-        user_id,
-        influencer_name,
-        category,
-        price,
-        is_trending: is_trending || false,
-        status: status || "available"
-      }
-    ])
-    .select()
+  const result = await db.query(
+    `INSERT INTO influencer_services
+    (user_id, influencer_name, category, price, is_trending, status)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING *`,
+    [
+      user_id,
+      influencer_name,
+      category,
+      price,
+      is_trending || false,
+      status || "available"
+    ]
+  );
 
-  if (error) throw error
-
-  return data[0]
-}
-
+  return result.rows[0];
+};
 
 // ==========================
 // GET ALL SERVICES (MARKETPLACE)
 // ==========================
 export const getAllServices = async () => {
-  const { data, error } = await supabase
-    .from("influencer_services")
-    .select("*")
-    .order("service_id", { ascending: false })
+  const result = await db.query(
+    `SELECT * FROM influencer_services
+     ORDER BY service_id DESC`
+  );
 
-  if (error) throw error
-
-  return data
-}
-
+  return result.rows;
+};
 
 // ==========================
 // GET SERVICES BY USER
 // ==========================
 export const getServicesByUser = async (user_id) => {
-  const { data, error } = await supabase
-    .from("influencer_services")
-    .select("*")
-    .eq("user_id", user_id)
+  const result = await db.query(
+    `SELECT * FROM influencer_services
+     WHERE user_id = $1`,
+    [user_id]
+  );
 
-  if (error) throw error
-
-  return data
-}
-
+  return result.rows;
+};
 
 // ==========================
 // UPDATE SERVICE STATUS
 // ==========================
 export const updateServiceStatus = async (service_id, status) => {
-  const { data, error } = await supabase
-    .from("influencer_services")
-    .update({ status })
-    .eq("service_id", service_id)
-    .select()
+  const result = await db.query(
+    `UPDATE influencer_services
+     SET status = $1
+     WHERE service_id = $2
+     RETURNING *`,
+    [status, service_id]
+  );
 
-  if (error) throw error
-
-  return data[0]
-}
+  return result.rows[0];
+};

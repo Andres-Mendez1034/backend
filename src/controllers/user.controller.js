@@ -1,106 +1,97 @@
-import { supabase } from "../config/supabaseClient.js"
+import db from "../config/db.js";
 
 // ==========================
 // OBTENER TODOS LOS USUARIOS
 // ==========================
 export const getAllUsers = async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .order("created_at", { ascending: false })
+    const result = await db.query(
+      `SELECT * FROM users ORDER BY created_at DESC`
+    );
 
-    if (error) {
-      return res.status(400).json({ error: error.message })
-    }
-
-    return res.json(data)
+    return res.json(result.rows);
 
   } catch (err) {
-    return res.status(500).json({ error: err.message })
+    return res.status(500).json({ error: err.message });
   }
-}
-
+};
 
 // ==========================
 // OBTENER USUARIO POR ID
 // ==========================
 export const getUserById = async (req, res) => {
   try {
-    const { id } = req.params
+    const { id } = req.params;
 
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", id)
-      .single()
+    const result = await db.query(
+      `SELECT * FROM users WHERE id = $1`,
+      [id]
+    );
 
-    if (error || !data) {
-      return res.status(404).json({ error: "User not found" })
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
     }
 
-    return res.json(data)
+    return res.json(result.rows[0]);
 
   } catch (err) {
-    return res.status(500).json({ error: err.message })
+    return res.status(500).json({ error: err.message });
   }
-}
-
+};
 
 // ==========================
 // ACTUALIZAR USUARIO
 // ==========================
 export const updateUser = async (req, res) => {
   try {
-    const { id } = req.params
-    const updates = req.body
+    const { id } = req.params;
+    const updates = req.body;
 
-    // evitar cambios peligrosos
-    delete updates.id
-    delete updates.email // opcional: proteger email
+    delete updates.id;
+    delete updates.email;
 
-    const { data, error } = await supabase
-      .from("users")
-      .update(updates)
-      .eq("id", id)
-      .select()
+    const keys = Object.keys(updates);
+    const values = Object.values(updates);
 
-    if (error) {
-      return res.status(400).json({ error: error.message })
-    }
+    const setQuery = keys
+      .map((key, i) => `${key} = $${i + 2}`)
+      .join(", ");
+
+    const result = await db.query(
+      `UPDATE users
+       SET ${setQuery}
+       WHERE id = $1
+       RETURNING *`,
+      [id, ...values]
+    );
 
     return res.json({
       message: "User updated",
-      user: data[0]
-    })
+      user: result.rows[0]
+    });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message })
+    return res.status(500).json({ error: err.message });
   }
-}
-
+};
 
 // ==========================
-// ELIMINAR USUARIO (opcional)
+// ELIMINAR USUARIO
 // ==========================
 export const deleteUser = async (req, res) => {
   try {
-    const { id } = req.params
+    const { id } = req.params;
 
-    const { error } = await supabase
-      .from("users")
-      .delete()
-      .eq("id", id)
-
-    if (error) {
-      return res.status(400).json({ error: error.message })
-    }
+    await db.query(
+      `DELETE FROM users WHERE id = $1`,
+      [id]
+    );
 
     return res.json({
       message: "User deleted successfully"
-    })
+    });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message })
+    return res.status(500).json({ error: err.message });
   }
-}
+};
