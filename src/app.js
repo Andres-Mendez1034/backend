@@ -15,6 +15,7 @@ import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import profileRoutes from "./routes/profiles.routes.js";
 import marketplaceRoutes from "./routes/marketplace.routes.js";
+import chatbotRoutes from "./routes/chatbot.routes.js"; // ✅ ADDED
 
 // ==========================
 // MIDDLEWARES
@@ -50,7 +51,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // ==========================
 app.get("/", (req, res) => {
   res.json({
-    message: "🚀 Brand Connect API is running"
+    message: "🚀 Brand Connect API is running",
   });
 });
 
@@ -62,12 +63,12 @@ app.get("/test-db", async (req, res) => {
     const result = await db.query("SELECT NOW()");
     res.json({
       status: "OK",
-      time: result.rows[0]
+      time: result.rows[0],
     });
   } catch (error) {
     res.status(500).json({
       status: "ERROR",
-      message: error.message
+      message: error.message,
     });
   }
 });
@@ -79,6 +80,9 @@ app.use("/api/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/profiles", profileRoutes);
 app.use("/marketplace", marketplaceRoutes);
+
+// ✅ CHATBOT ROUTE (ADDED)
+app.use("/api/chatbot", chatbotRoutes);
 
 // ==========================
 // ERROR HANDLER
