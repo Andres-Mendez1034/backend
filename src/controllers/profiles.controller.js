@@ -1,7 +1,7 @@
 import db from "../config/db.js";
 
 /* =========================================================
-   CREAR INFLUENCER PROFILE + TAGS + TIKTOK
+   CREAR / ACTUALIZAR INFLUENCER PROFILE (UPSERT + VALIDACIÓN)
 ========================================================= */
 export const createInfluencerProfile = async (req, res) => {
   try {
@@ -10,7 +10,7 @@ export const createInfluencerProfile = async (req, res) => {
       full_name,
       id_number,
       location,
-      tiktok_url, // 🔥 NUEVO
+      tiktok_url,
       tags = []
     } = req.body;
 
@@ -18,17 +18,38 @@ export const createInfluencerProfile = async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // 1. Crear perfil (FIX: category eliminado)
+    // 🔥 VALIDACIÓN ANTES DEL UPSERT (evita error id_number duplicado)
+    const idCheck = await db.query(
+      `SELECT user_id FROM influencer_profiles WHERE id_number = $1`,
+      [id_number]
+    );
+
+    if (
+      idCheck.rows.length > 0 &&
+      idCheck.rows[0].user_id !== user_id
+    ) {
+      return res.status(409).json({
+        error: "id_number already used by another user"
+      });
+    }
+
+    // 🔥 UPSERT por user_id
     const result = await db.query(
       `INSERT INTO influencer_profiles
       (user_id, full_name, id_number, category, location, tiktok_url)
       VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        full_name = EXCLUDED.full_name,
+        id_number = EXCLUDED.id_number,
+        location = EXCLUDED.location,
+        tiktok_url = EXCLUDED.tiktok_url
       RETURNING *`,
       [
         user_id,
         full_name,
         id_number,
-        "influencer", // 🔥 fijo (no se selecciona desde frontend)
+        "influencer",
         location,
         tiktok_url
       ]
@@ -36,8 +57,14 @@ export const createInfluencerProfile = async (req, res) => {
 
     const profile = result.rows[0];
 
-    // 2. Insertar tags (INTERESES)
-    if (tags && tags.length > 0) {
+    // 🔥 reset tags (evita duplicados)
+    await db.query(
+      `DELETE FROM profile_tags WHERE profile_id = $1`,
+      [profile.profile_id]
+    );
+
+    // 🔥 insert tags
+    if (tags.length > 0) {
       for (const tagName of tags) {
         const tagResult = await db.query(
           `SELECT tag_id FROM tags WHERE tag_name = $1`,
@@ -54,20 +81,20 @@ export const createInfluencerProfile = async (req, res) => {
       }
     }
 
-    return res.status(201).json({
-      message: "Influencer profile created",
+    return res.status(200).json({
+      message: "Influencer profile saved",
       profile
     });
 
   } catch (err) {
-    console.error("CREATE INFLUENCER ERROR:", err);
+    console.error("INFLUENCER PROFILE ERROR:", err);
     return res.status(500).json({ error: err.message });
   }
 };
 
 
 /* =========================================================
-   CREAR CLIENT PROFILE
+   CREAR / ACTUALIZAR CLIENT PROFILE (UPSERT)
 ========================================================= */
 export const createClientProfile = async (req, res) => {
   try {
@@ -89,6 +116,14 @@ export const createClientProfile = async (req, res) => {
       `INSERT INTO client_profiles
       (user_id, business_name, owner_name, business_type, location, awareness_level, main_goal)
       VALUES ($1,$2,$3,$4,$5,$6,$7)
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        business_name = EXCLUDED.business_name,
+        owner_name = EXCLUDED.owner_name,
+        business_type = EXCLUDED.business_type,
+        location = EXCLUDED.location,
+        awareness_level = EXCLUDED.awareness_level,
+        main_goal = EXCLUDED.main_goal
       RETURNING *`,
       [
         user_id,
@@ -101,13 +136,13 @@ export const createClientProfile = async (req, res) => {
       ]
     );
 
-    return res.status(201).json({
-      message: "Client profile created",
+    return res.status(200).json({
+      message: "Client profile saved",
       profile: result.rows[0]
     });
 
   } catch (err) {
-    console.error("CREATE CLIENT ERROR:", err);
+    console.error("CLIENT PROFILE ERROR:", err);
     return res.status(500).json({ error: err.message });
   }
 };
@@ -142,19 +177,30 @@ export const getProfileByUser = async (req, res) => {
 
 
 /* =========================================================
-   UPDATE INFLUENCER PROFILE
+   UPDATE INFLUENCER PROFILE (SEGURO)
 ========================================================= */
+
+const ALLOWED_FIELDS = [
+  "full_name",
+  "id_number",
+  "location",
+  "tiktok_url"
+];
+
 export const updateInfluencerProfile = async (req, res) => {
   try {
     const { user_id } = req.params;
     const updates = req.body;
 
-    const keys = Object.keys(updates);
-    const values = Object.values(updates);
+    const keys = Object.keys(updates).filter(k =>
+      ALLOWED_FIELDS.includes(k)
+    );
 
     if (keys.length === 0) {
-      return res.status(400).json({ error: "No fields to update" });
+      return res.status(400).json({ error: "No valid fields to update" });
     }
+
+    const values = keys.map(k => updates[k]);
 
     const setQuery = keys
       .map((key, i) => `${key} = $${i + 2}`)

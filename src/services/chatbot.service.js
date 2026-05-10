@@ -58,7 +58,7 @@ El usuario puede no saber de marketing. Debes guiarlo como un asesor experto que
               content: message,
             },
           ],
-          temperature: 0.7,
+          temperature: 0.7, // significa nivel de presicion del modelo,  (0.0-0.3 = muy preciso, menos humano.  (0.4-0.8) entre creatividad y presicion, mas humano.  (0.9-1.2) Demasiado imprecesible. muy creativo pero delirio)
         },
         {
           headers: {
