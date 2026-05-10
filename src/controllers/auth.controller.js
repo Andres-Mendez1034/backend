@@ -20,6 +20,45 @@ const logError = (type, step, err) => {
 /* =========================================================
    REGISTER
 ========================================================= */
+
+/**
+ * @openapi
+ * /api/auth/register:
+ *   post:
+ *     summary: Register new user with MFA setup
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - name
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: test@email.com
+ *               password:
+ *                 type: string
+ *                 example: 123456
+ *               name:
+ *                 type: string
+ *                 example: John Doe
+ *               role:
+ *                 type: string
+ *                 example: client
+ *     responses:
+ *       201:
+ *         description: User created with MFA enabled
+ *       409:
+ *         description: User already exists
+ *       500:
+ *         description: Server error
+ */
 export const register = async (req, res) => {
   const TYPE = "REGISTER";
 
@@ -32,23 +71,16 @@ export const register = async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    /* =========================================
-       CHECK EXISTING USER
-    ========================================= */
     const existing = await db.query(
       `SELECT id, email FROM users WHERE email = $1`,
       [email]
     );
 
     if (existing.rows.length > 0) {
-      log(TYPE, "EXISTS", "User already exists", existing.rows[0]);
-
       return res.status(409).json({
         error: "User already exists",
       });
     }
-
-    log(TYPE, "CREATE", "Creating user");
 
     const user = await registerUser({
       email,
@@ -57,11 +89,6 @@ export const register = async (req, res) => {
       role,
     });
 
-    log(TYPE, "CREATED", "User created", user);
-
-    /* =========================================
-       MFA SETUP
-    ========================================= */
     const secret = speakeasy.generateSecret({
       name: `BrandConnect (${email})`,
     });
@@ -72,8 +99,6 @@ export const register = async (req, res) => {
        WHERE id = $2`,
       [secret.base32, user.id]
     );
-
-    log(TYPE, "MFA", "MFA enabled");
 
     return res.status(201).json({
       message: "User created",
@@ -94,12 +119,42 @@ export const register = async (req, res) => {
 /* =========================================================
    LOGIN
 ========================================================= */
+
+/**
+ * @openapi
+ * /api/auth/login:
+ *   post:
+ *     summary: Login user (MFA optional)
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: test@email.com
+ *               password:
+ *                 type: string
+ *                 example: 123456
+ *     responses:
+ *       200:
+ *         description: Login success or MFA required
+ *       400:
+ *         description: Missing fields
+ *       500:
+ *         description: Server error
+ */
 export const login = async (req, res) => {
   const TYPE = "LOGIN";
 
   try {
-    log(TYPE, "START", req.body);
-
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -131,19 +186,46 @@ export const login = async (req, res) => {
   }
 };
 
+/* =========================================================
+   VERIFY MFA
+========================================================= */
+
+/**
+ * @openapi
+ * /api/auth/verify-mfa:
+ *   post:
+ *     summary: Verify MFA token
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - token
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: test@email.com
+ *               token:
+ *                 type: string
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: MFA verified successfully
+ *       400:
+ *         description: Invalid MFA code or missing config
+ *       500:
+ *         description: Server error
+ */
 export const verifyMFA = async (req, res) => {
   const TYPE = "MFA";
 
   try {
-    log(TYPE, "VERIFY_START", req.body);
-
     const { email, token } = req.body;
-
-    console.log("📩 RAW BODY:", req.body);
-    console.log("📧 EMAIL:", email);
-    console.log("🔢 TOKEN RAW:", token);
-    console.log("🔢 TOKEN TYPE:", typeof token);
-    console.log("🔢 TOKEN LENGTH:", token?.length);
 
     const result = await db.query(
       `SELECT * FROM users WHERE email = $1`,
@@ -152,24 +234,13 @@ export const verifyMFA = async (req, res) => {
 
     const user = result.rows[0];
 
-    console.log("👤 USER FOUND:", user?.email);
-    console.log("🔐 MFA ENABLED:", user?.mfa_enabled);
-    console.log("🔑 SECRET DB:", user?.mfa_secret);
-    console.log("🔑 SECRET TYPE:", typeof user?.mfa_secret);
-    console.log("🔑 SECRET LENGTH:", user?.mfa_secret?.length);
-
     if (!user || !user.mfa_secret) {
-      console.log("❌ NO MFA CONFIGURED");
       return res.status(400).json({
         error: "MFA not configured",
       });
     }
 
-    // 🔥 PRUEBA con trim (MUY IMPORTANTE)
     const cleanToken = token?.toString().trim();
-
-    console.log("🧹 TOKEN CLEAN:", cleanToken);
-    console.log("🧹 TOKEN CLEAN LENGTH:", cleanToken?.length);
 
     const verified = speakeasy.totp.verify({
       secret: user.mfa_secret,
@@ -178,16 +249,11 @@ export const verifyMFA = async (req, res) => {
       window: 1,
     });
 
-    console.log("🧪 VERIFY RESULT:", verified);
-
     if (!verified) {
-      console.log("❌ MFA INVALID");
       return res.status(400).json({
         error: "Invalid MFA code",
       });
     }
-
-    console.log("✅ MFA SUCCESS");
 
     return res.json({
       success: true,
@@ -204,8 +270,36 @@ export const verifyMFA = async (req, res) => {
 };
 
 /* =========================================================
-   🔥 NEW: MFA QR ENDPOINT (ESTO TE FALTABA)
+   GET MFA QR
 ========================================================= */
+
+/**
+ * @openapi
+ * /api/auth/mfa/qr:
+ *   post:
+ *     summary: Get MFA QR URL
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: test@email.com
+ *     responses:
+ *       200:
+ *         description: QR URL generated
+ *       400:
+ *         description: MFA not configured
+ *       500:
+ *         description: Server error
+ */
 export const getMFAQR = async (req, res) => {
   try {
     const { email } = req.body;
@@ -230,8 +324,6 @@ export const getMFAQR = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("MFA QR ERROR:", err.message);
-
     return res.status(500).json({
       error: err.message,
     });

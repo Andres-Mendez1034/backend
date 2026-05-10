@@ -1,0 +1,353 @@
+openapi: 3.0.0
+
+info:
+  title: Brand Connect API
+  version: 1.0.0
+  description: Backend API for influencer marketplace platform (Brand Connect)
+
+servers:
+  - url: http://localhost:3000
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Profiles
+  - name: Marketplace
+
+paths:
+
+  # =========================================================
+  # AUTH
+  # =========================================================
+
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user with MFA setup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email:
+                  type: string
+                  example: test@email.com
+                password:
+                  type: string
+                  example: 123456
+                name:
+                  type: string
+                  example: Juan Perez
+                role:
+                  type: string
+                  example: client
+      responses:
+        "201":
+          description: User created successfully
+        "409":
+          description: User already exists
+        "400":
+          description: Validation error
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: test@email.com
+                password:
+                  type: string
+                  example: 123456
+      responses:
+        "200":
+          description: Login successful or MFA required
+        "400":
+          description: Missing fields
+
+  /api/auth/verify-mfa:
+    post:
+      tags: [Auth]
+      summary: Verify MFA code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, token]
+              properties:
+                email:
+                  type: string
+                  example: test@email.com
+                token:
+                  type: string
+                  example: "123456"
+      responses:
+        "200":
+          description: MFA verified successfully
+        "400":
+          description: Invalid MFA code
+
+  /api/auth/mfa/qr:
+    post:
+      tags: [Auth]
+      summary: Get MFA QR code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  example: test@email.com
+      responses:
+        "200":
+          description: QR generated successfully
+        "400":
+          description: MFA not configured
+
+  # =========================================================
+  # USERS
+  # =========================================================
+
+  /users:
+    get:
+      tags: [Users]
+      summary: Get all users
+      responses:
+        "200":
+          description: List of users
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Get user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User found
+        "404":
+          description: User not found
+
+    put:
+      tags: [Users]
+      summary: Update user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+      responses:
+        "200":
+          description: User updated
+
+    delete:
+      tags: [Users]
+      summary: Delete user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User deleted
+
+  # =========================================================
+  # PROFILES
+  # =========================================================
+
+  /profiles/influencer:
+    post:
+      tags: [Profiles]
+      summary: Create influencer profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, niche]
+              properties:
+                user_id:
+                  type: string
+                  example: "1"
+                niche:
+                  type: string
+                  example: fitness
+                bio:
+                  type: string
+                  example: Influencer bio
+      responses:
+        "201":
+          description: Profile created
+
+  /profiles/client:
+    post:
+      tags: [Profiles]
+      summary: Create client profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+                  example: "2"
+                company_name:
+                  type: string
+                  example: Startup Inc
+      responses:
+        "201":
+          description: Client profile created
+
+  /profiles/user/{user_id}:
+    get:
+      tags: [Profiles]
+      summary: Get profile by user ID
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Profile found
+
+  /profiles/influencer/{user_id}:
+    put:
+      tags: [Profiles]
+      summary: Update influencer profile
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                niche:
+                  type: string
+                bio:
+                  type: string
+      responses:
+        "200":
+          description: Profile updated
+
+  # =========================================================
+  # MARKETPLACE
+  # =========================================================
+
+  /marketplace/service:
+    post:
+      tags: [Marketplace]
+      summary: Create service (influencer offer)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, title]
+              properties:
+                user_id:
+                  type: string
+                  example: "1"
+                title:
+                  type: string
+                  example: Instagram Reel
+                description:
+                  type: string
+                  example: Promo service
+                price:
+                  type: number
+                  example: 50
+      responses:
+        "201":
+          description: Service created
+
+  /marketplace/services:
+    get:
+      tags: [Marketplace]
+      summary: Get all marketplace services
+      responses:
+        "200":
+          description: List of services
+
+  /marketplace/services/user/{user_id}:
+    get:
+      tags: [Marketplace]
+      summary: Get services by user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User services found
+
+  /marketplace/service/status:
+    put:
+      tags: [Marketplace]
+      summary: Update service status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [service_id, status]
+              properties:
+                service_id:
+                  type: string
+                  example: "10"
+                status:
+                  type: string
+                  example: active
+      responses:
+        "200":
+          description: Status updated
