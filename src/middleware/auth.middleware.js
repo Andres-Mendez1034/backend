@@ -3,7 +3,7 @@ import db from "../config/db.js";
 // ==========================
 // AUTH MIDDLEWARE
 // ==========================
-export const authMiddleware = async (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -37,3 +37,6 @@ export const authMiddleware = async (req, res, next) => {
     return res.status(500).json({ error: err.message });
   }
 };
+
+// ✅ IMPORTANTE: default export (lo que tu routes espera)
+export default authMiddleware;

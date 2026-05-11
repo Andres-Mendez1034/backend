@@ -8,11 +8,46 @@ info:
 servers:
   - url: http://localhost:3000
 
+# =========================================================
+# TAGS
+# =========================================================
+
 tags:
   - name: Auth
+    description: Authentication & MFA endpoints
+
   - name: Users
+    description: User management endpoints
+
   - name: Profiles
+    description: Influencer & client profile management
+
   - name: Marketplace
+    description: Influencer marketplace services
+
+  - name: Stripe Payments
+    description: Stripe checkout and payment processing
+
+  - name: Fulfillment
+    description: Service delivery workflow
+
+# =========================================================
+# SECURITY
+# =========================================================
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []
+
+# =========================================================
+# PATHS
+# =========================================================
 
 paths:
 
@@ -22,102 +57,156 @@ paths:
 
   /api/auth/register:
     post:
-      tags: [Auth]
+      tags:
+        - Auth
+
       summary: Register a new user with MFA setup
+
+      security: []
+
       requestBody:
         required: true
+
         content:
           application/json:
             schema:
               type: object
-              required: [email, password, name]
+
+              required:
+                - email
+                - password
+                - name
+
               properties:
                 email:
                   type: string
                   example: test@email.com
+
                 password:
                   type: string
                   example: 123456
+
                 name:
                   type: string
                   example: Juan Perez
+
                 role:
                   type: string
                   example: client
+
       responses:
         "201":
           description: User created successfully
+
         "409":
           description: User already exists
+
         "400":
           description: Validation error
 
   /api/auth/login:
     post:
-      tags: [Auth]
+      tags:
+        - Auth
+
       summary: Login user
+
+      security: []
+
       requestBody:
         required: true
+
         content:
           application/json:
             schema:
               type: object
-              required: [email, password]
+
+              required:
+                - email
+                - password
+
               properties:
                 email:
                   type: string
                   example: test@email.com
+
                 password:
                   type: string
                   example: 123456
+
       responses:
         "200":
           description: Login successful or MFA required
+
         "400":
           description: Missing fields
 
   /api/auth/verify-mfa:
     post:
-      tags: [Auth]
+      tags:
+        - Auth
+
       summary: Verify MFA code
+
+      security: []
+
       requestBody:
         required: true
+
         content:
           application/json:
             schema:
               type: object
-              required: [email, token]
+
+              required:
+                - email
+                - token
+
               properties:
                 email:
                   type: string
                   example: test@email.com
+
                 token:
                   type: string
                   example: "123456"
+
       responses:
         "200":
           description: MFA verified successfully
+
         "400":
           description: Invalid MFA code
 
   /api/auth/mfa/qr:
     post:
-      tags: [Auth]
-      summary: Get MFA QR code
+      tags:
+        - Auth
+
+      summary: Generate MFA QR code
+
+      security: []
+
       requestBody:
         required: true
+
         content:
           application/json:
             schema:
               type: object
-              required: [email]
+
+              required:
+                - email
+
               properties:
                 email:
                   type: string
                   example: test@email.com
+
       responses:
         "200":
           description: QR generated successfully
+
         "400":
           description: MFA not configured
 
@@ -127,61 +216,84 @@ paths:
 
   /users:
     get:
-      tags: [Users]
+      tags:
+        - Users
+
       summary: Get all users
+
       responses:
         "200":
           description: List of users
 
   /users/{id}:
     get:
-      tags: [Users]
+      tags:
+        - Users
+
       summary: Get user by ID
+
       parameters:
         - name: id
           in: path
           required: true
+
           schema:
             type: string
+
       responses:
         "200":
           description: User found
+
         "404":
           description: User not found
 
     put:
-      tags: [Users]
+      tags:
+        - Users
+
       summary: Update user
+
       parameters:
         - name: id
           in: path
           required: true
+
           schema:
             type: string
+
       requestBody:
         required: true
+
         content:
           application/json:
             schema:
               type: object
+
               properties:
                 name:
                   type: string
+
                 email:
                   type: string
+
       responses:
         "200":
           description: User updated
 
     delete:
-      tags: [Users]
+      tags:
+        - Users
+
       summary: Delete user
+
       parameters:
         - name: id
           in: path
           required: true
+
           schema:
             type: string
+
       responses:
         "200":
           description: User deleted
@@ -192,86 +304,120 @@ paths:
 
   /profiles/influencer:
     post:
-      tags: [Profiles]
+      tags:
+        - Profiles
+
       summary: Create influencer profile
+
       requestBody:
         required: true
+
         content:
           application/json:
             schema:
               type: object
-              required: [user_id, niche]
+
+              required:
+                - user_id
+                - niche
+
               properties:
                 user_id:
                   type: string
                   example: "1"
+
                 niche:
                   type: string
-                  example: fitness
+                  example: gaming
+
                 bio:
                   type: string
-                  example: Influencer bio
+                  example: Gaming content creator
+
       responses:
         "201":
-          description: Profile created
+          description: Influencer profile created
 
   /profiles/client:
     post:
-      tags: [Profiles]
+      tags:
+        - Profiles
+
       summary: Create client profile
+
       requestBody:
         required: true
+
         content:
           application/json:
             schema:
               type: object
-              required: [user_id]
+
+              required:
+                - user_id
+
               properties:
                 user_id:
                   type: string
                   example: "2"
+
                 company_name:
                   type: string
                   example: Startup Inc
+
       responses:
         "201":
           description: Client profile created
 
   /profiles/user/{user_id}:
     get:
-      tags: [Profiles]
+      tags:
+        - Profiles
+
       summary: Get profile by user ID
+
       parameters:
         - name: user_id
           in: path
           required: true
+
           schema:
             type: string
+
       responses:
         "200":
           description: Profile found
 
   /profiles/influencer/{user_id}:
     put:
-      tags: [Profiles]
+      tags:
+        - Profiles
+
       summary: Update influencer profile
+
       parameters:
         - name: user_id
           in: path
           required: true
+
           schema:
             type: string
+
       requestBody:
         required: true
+
         content:
           application/json:
             schema:
               type: object
+
               properties:
                 niche:
                   type: string
+
                 bio:
                   type: string
+
       responses:
         "200":
           description: Profile updated
@@ -282,72 +428,279 @@ paths:
 
   /marketplace/service:
     post:
-      tags: [Marketplace]
-      summary: Create service (influencer offer)
+      tags:
+        - Marketplace
+
+      summary: Create influencer marketplace service
+
       requestBody:
         required: true
+
         content:
           application/json:
             schema:
               type: object
-              required: [user_id, title]
+
+              required:
+                - title
+                - price
+
               properties:
-                user_id:
-                  type: string
-                  example: "1"
                 title:
                   type: string
-                  example: Instagram Reel
+                  example: Gaming TikTok Promotion
+
                 description:
                   type: string
-                  example: Promo service
+                  example: Funny gaming promotion
+
+                category:
+                  type: string
+                  example: gaming
+
                 price:
                   type: number
                   example: 50
+
       responses:
         "201":
-          description: Service created
+          description: Service created successfully
 
   /marketplace/services:
     get:
-      tags: [Marketplace]
+      tags:
+        - Marketplace
+
       summary: Get all marketplace services
+
       responses:
         "200":
-          description: List of services
+          description: List of marketplace services
 
   /marketplace/services/user/{user_id}:
     get:
-      tags: [Marketplace]
+      tags:
+        - Marketplace
+
       summary: Get services by user
+
       parameters:
         - name: user_id
           in: path
           required: true
+
           schema:
             type: string
+
       responses:
         "200":
           description: User services found
 
   /marketplace/service/status:
     put:
-      tags: [Marketplace]
-      summary: Update service status
+      tags:
+        - Marketplace
+
+      summary: Update marketplace service status
+
       requestBody:
         required: true
+
         content:
           application/json:
             schema:
               type: object
-              required: [service_id, status]
+
+              required:
+                - service_id
+                - status
+
               properties:
                 service_id:
                   type: string
                   example: "10"
+
                 status:
                   type: string
-                  example: active
+
+                  enum:
+                    - available
+                    - unavailable
+                    - paused
+
+                  example: available
+
       responses:
         "200":
-          description: Status updated
+          description: Service status updated
+
+  # =========================================================
+  # STRIPE PAYMENTS
+  # =========================================================
+
+  /payments/checkout/{service_id}:
+    post:
+      tags:
+        - Stripe Payments
+
+      summary: Create Stripe checkout session
+
+      parameters:
+        - name: service_id
+          in: path
+          required: true
+
+          schema:
+            type: string
+            example: "1"
+
+      responses:
+        "200":
+          description: Stripe checkout session created
+
+        "400":
+          description: Service unavailable
+
+        "404":
+          description: Service not found
+
+  /payments/status/{order_id}:
+    get:
+      tags:
+        - Stripe Payments
+
+      summary: Get payment status by order
+
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+
+          schema:
+            type: string
+            example: "1"
+
+      responses:
+        "200":
+          description: Payment status retrieved
+
+        "404":
+          description: Order not found
+
+  # =========================================================
+  # FULFILLMENT
+  # =========================================================
+
+  /fulfillment/{order_id}:
+    get:
+      tags:
+        - Fulfillment
+
+      summary: Get fulfillment by order
+
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+
+          schema:
+            type: string
+
+      responses:
+        "200":
+          description: Fulfillment found
+
+        "404":
+          description: Fulfillment not found
+
+  /fulfillment/accept:
+    post:
+      tags:
+        - Fulfillment
+
+      summary: Influencer accepts order
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+            schema:
+              type: object
+
+              required:
+                - order_id
+
+              properties:
+                order_id:
+                  type: string
+                  example: "1"
+
+      responses:
+        "200":
+          description: Order accepted
+
+  /fulfillment/deliver:
+    post:
+      tags:
+        - Fulfillment
+
+      summary: Influencer delivers service
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+            schema:
+              type: object
+
+              required:
+                - order_id
+                - delivery_data
+
+              properties:
+                order_id:
+                  type: string
+                  example: "1"
+
+                delivery_data:
+                  type: object
+
+                  example:
+                    link: https://tiktok.com/video/123
+
+                notes:
+                  type: string
+                  example: Campaign delivered successfully
+
+      responses:
+        "200":
+          description: Service delivered
+
+  /fulfillment/complete:
+    post:
+      tags:
+        - Fulfillment
+
+      summary: Client completes order
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+            schema:
+              type: object
+
+              required:
+                - order_id
+
+              properties:
+                order_id:
+                  type: string
+                  example: "1"
+
+      responses:
+        "200":
+          description: Order completed

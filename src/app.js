@@ -1,12 +1,12 @@
 import express from "express";
 import cors from "cors";
-
-// ==========================
-// SWAGGER (YAML MODE)
-// ==========================
-import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import yaml from "yaml";
+
+// ==========================
+// SWAGGER
+// ==========================
+import swaggerUi from "swagger-ui-express";
 
 // ==========================
 // ROUTES
@@ -15,7 +15,9 @@ import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import profileRoutes from "./routes/profiles.routes.js";
 import marketplaceRoutes from "./routes/marketplace.routes.js";
-import chatbotRoutes from "./routes/chatbot.routes.js"; // ✅ ADDED
+import chatbotRoutes from "./routes/chatbot.routes.js";
+import fulfillmentRoutes from "./routes/fulfillment.routes.js";
+import paymentsRoutes from "./payments/payments.routes.js";
 
 // ==========================
 // MIDDLEWARES
@@ -30,21 +32,45 @@ import db from "./config/db.js";
 const app = express();
 
 // ==========================
-// GLOBAL MIDDLEWARES
+// CORS
 // ==========================
 app.use(cors());
+
+/**
+ * =========================================================
+ * STRIPE WEBHOOK RAW BODY
+ * =========================================================
+ * Stripe necesita el body RAW para validar firma.
+ * ESTE endpoint DEBE ir antes de express.json()
+ */
+app.use(
+  "/payments/webhook",
+  express.raw({ type: "application/json" })
+);
+
+// ==========================
+// JSON PARSER
+// ==========================
 app.use(express.json());
 
 // ==========================
-// SWAGGER YAML LOADER
+// SWAGGER YAML
 // ==========================
-const swaggerFile = fs.readFileSync("./src/docs/swagger.yaml", "utf8");
+const swaggerFile = fs.readFileSync(
+  "./src/docs/swagger.yaml",
+  "utf8"
+);
+
 const swaggerDocument = yaml.parse(swaggerFile);
 
 // ==========================
-// SWAGGER UI ROUTE
+// SWAGGER DOCS
 // ==========================
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocument)
+);
 
 // ==========================
 // HEALTH CHECK
@@ -56,16 +82,22 @@ app.get("/", (req, res) => {
 });
 
 // ==========================
-// TEST DB ENDPOINT
+// DB TEST
 // ==========================
 app.get("/test-db", async (req, res) => {
   try {
-    const result = await db.query("SELECT NOW()");
+
+    const result = await db.query(
+      "SELECT NOW()"
+    );
+
     res.json({
       status: "OK",
       time: result.rows[0],
     });
+
   } catch (error) {
+
     res.status(500).json({
       status: "ERROR",
       message: error.message,
@@ -74,18 +106,32 @@ app.get("/test-db", async (req, res) => {
 });
 
 // ==========================
-// ROUTES
+// API ROUTES
 // ==========================
+
+// AUTH
 app.use("/api/auth", authRoutes);
+
+// USERS
 app.use("/users", userRoutes);
+
+// PROFILES
 app.use("/profiles", profileRoutes);
+
+// MARKETPLACE
 app.use("/marketplace", marketplaceRoutes);
 
-// ✅ CHATBOT ROUTE (ADDED)
+// PAYMENTS (Stripe)
+app.use("/payments", paymentsRoutes);
+
+// FULFILLMENT
+app.use("/fulfillment", fulfillmentRoutes);
+
+// CHATBOT
 app.use("/api/chatbot", chatbotRoutes);
 
 // ==========================
-// ERROR HANDLER
+// GLOBAL ERROR HANDLER
 // ==========================
 app.use(errorMiddleware);
 
