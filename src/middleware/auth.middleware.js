@@ -1,7 +1,7 @@
 import db from "../config/db.js";
 
 // ==========================
-// AUTH MIDDLEWARE (SAFE)
+// AUTH MIDDLEWARE (SAFE + ROLES READY)
 // ==========================
 const authMiddleware = async (req, res, next) => {
   try {
@@ -19,15 +19,15 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    // ❌ evita crash PostgreSQL bigint
+    // ⚠️ EN TU SISTEMA ACTUAL: token = user_id
     const userId = Number(token);
 
     if (isNaN(userId)) {
-      return res.status(401).json({ error: "Invalid user id format" });
+      return res.status(401).json({ error: "Invalid token format" });
     }
 
     const result = await db.query(
-      `SELECT * FROM users WHERE id = $1`,
+      `SELECT id, email, role, created_at FROM users WHERE id = $1`,
       [userId]
     );
 
@@ -35,7 +35,16 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ error: "Unauthorized user" });
     }
 
-    req.user = result.rows[0];
+    const user = result.rows[0];
+
+    // ==========================
+    // 🔥 NORMALIZACIÓN DE USER
+    // ==========================
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role || "client"
+    };
 
     next();
 

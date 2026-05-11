@@ -32,9 +32,9 @@ export const createService = async (serviceData) => {
 };
 
 // ==========================
-// GET ALL SERVICES (MARKETPLACE)
+// GET ALL SERVICES (RAW)
 // ==========================
-export const getAllServices = async () => {
+export const getAllServicesRaw = async () => {
   const result = await db.query(
     `SELECT * FROM influencer_services
      ORDER BY service_id DESC`
@@ -49,7 +49,8 @@ export const getAllServices = async () => {
 export const getServicesByUser = async (user_id) => {
   const result = await db.query(
     `SELECT * FROM influencer_services
-     WHERE user_id = $1`,
+     WHERE user_id = $1
+     ORDER BY service_id DESC`,
     [user_id]
   );
 
@@ -69,4 +70,30 @@ export const updateServiceStatus = async (service_id, status) => {
   );
 
   return result.rows[0];
+};
+
+// =========================================================
+// 🔥 MARKETPLACE VIEW (JOIN CON PROFILE - IMPORTANTE)
+// =========================================================
+export const getMarketplaceView = async () => {
+  const result = await db.query(
+    `
+    SELECT 
+      s.service_id,
+      s.influencer_name,
+      s.category,
+      s.price,
+      s.status,
+      s.is_trending,
+      p.location,
+      p.full_name,
+      p.tiktok_url
+    FROM influencer_services s
+    LEFT JOIN influencer_profiles p
+      ON s.user_id = p.user_id
+    ORDER BY s.service_id DESC
+    `
+  );
+
+  return result.rows;
 };

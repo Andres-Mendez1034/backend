@@ -1,7 +1,7 @@
 import db from "../config/db.js";
 
 /* =========================================================
-   CREAR / ACTUALIZAR INFLUENCER PROFILE (UPSERT + VALIDACIÓN)
+   CREAR / ACTUALIZAR INFLUENCER PROFILE (UPSERT)
 ========================================================= */
 export const createInfluencerProfile = async (req, res) => {
   try {
@@ -18,26 +18,21 @@ export const createInfluencerProfile = async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // 🔥 VALIDACIÓN ANTES DEL UPSERT (evita error id_number duplicado)
     const idCheck = await db.query(
       `SELECT user_id FROM influencer_profiles WHERE id_number = $1`,
       [id_number]
     );
 
-    if (
-      idCheck.rows.length > 0 &&
-      idCheck.rows[0].user_id !== user_id
-    ) {
+    if (idCheck.rows.length > 0 && idCheck.rows[0].user_id !== user_id) {
       return res.status(409).json({
         error: "id_number already used by another user"
       });
     }
 
-    // 🔥 UPSERT por user_id
     const result = await db.query(
       `INSERT INTO influencer_profiles
-      (user_id, full_name, id_number, category, location, tiktok_url)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      (user_id, full_name, id_number, location, tiktok_url)
+      VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (user_id)
       DO UPDATE SET
         full_name = EXCLUDED.full_name,
@@ -45,25 +40,16 @@ export const createInfluencerProfile = async (req, res) => {
         location = EXCLUDED.location,
         tiktok_url = EXCLUDED.tiktok_url
       RETURNING *`,
-      [
-        user_id,
-        full_name,
-        id_number,
-        "influencer",
-        location,
-        tiktok_url
-      ]
+      [user_id, full_name, id_number, location, tiktok_url]
     );
 
     const profile = result.rows[0];
 
-    // 🔥 reset tags (evita duplicados)
     await db.query(
       `DELETE FROM profile_tags WHERE profile_id = $1`,
       [profile.profile_id]
     );
 
-    // 🔥 insert tags
     if (tags.length > 0) {
       for (const tagName of tags) {
         const tagResult = await db.query(
@@ -94,7 +80,48 @@ export const createInfluencerProfile = async (req, res) => {
 
 
 /* =========================================================
-   CREAR / ACTUALIZAR CLIENT PROFILE (UPSERT)
+   CREATOR PROFILE (CLEAN - SIN NICHO NI CIUDAD)
+========================================================= */
+export const createCreatorProfile = async (req, res) => {
+  try {
+    console.log("BODY RECEIVED:", req.body);
+
+    const {
+      user_id,
+      full_name,
+      bio
+    } = req.body;
+
+    if (!user_id || !full_name) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const result = await db.query(
+      `INSERT INTO creator_profiles
+      (user_id, full_name, bio)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        full_name = EXCLUDED.full_name,
+        bio = EXCLUDED.bio
+      RETURNING *`,
+      [user_id, full_name, bio]
+    );
+
+    return res.status(201).json({
+      message: "Creator profile saved",
+      profile: result.rows[0]
+    });
+
+  } catch (err) {
+    console.error("CREATOR PROFILE ERROR:", err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+
+/* =========================================================
+   CREAR CLIENT PROFILE (UPSERT)
 ========================================================= */
 export const createClientProfile = async (req, res) => {
   try {
@@ -149,7 +176,7 @@ export const createClientProfile = async (req, res) => {
 
 
 /* =========================================================
-   OBTENER PERFIL POR USER
+   GET PROFILE BY USER
 ========================================================= */
 export const getProfileByUser = async (req, res) => {
   try {
@@ -177,9 +204,8 @@ export const getProfileByUser = async (req, res) => {
 
 
 /* =========================================================
-   UPDATE INFLUENCER PROFILE (SEGURO)
+   UPDATE INFLUENCER PROFILE
 ========================================================= */
-
 const ALLOWED_FIELDS = [
   "full_name",
   "id_number",

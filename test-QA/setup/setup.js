@@ -5,53 +5,71 @@ import db from "../../src/config/db.js";
  * =========================================================
  * GLOBAL TEST SETUP
  * =========================================================
- * Configuración global para Jest/Supertest.
  */
 
 beforeAll(async () => {
 
-  console.log("\n🧪 STARTING TEST SUITE...\n");
+  console.log("\n==============================");
+  console.log("STARTING TEST SUITE");
+  console.log("==============================\n");
 
   try {
 
     await db.query("SELECT NOW()");
 
-    console.log("🟢 TEST DATABASE CONNECTED");
+    console.log("TEST DATABASE CONNECTED");
 
   } catch (error) {
 
-    console.error("🔴 TEST DB CONNECTION ERROR");
+    console.error("TEST DB CONNECTION ERROR");
     console.error(error);
 
   }
 
 });
 
-beforeEach(async () => {
+beforeEach(() => {
 
   /**
-   * =========================================================
-   * RESET MOCKS / CLEANUP
-   * =========================================================
+   * IMPORTANTE:
+   * No usar jest global directamente aquí porque en tu entorno ESM puede fallar
+   * Si necesitas mocks, se manejan dentro de cada test
    */
 
-  jest.clearAllMocks();
+  // limpiar mocks solo si existen en contexto de test
+  if (typeof jest !== "undefined" && jest.clearAllMocks) {
+    jest.clearAllMocks();
+  }
 
 });
 
 afterAll(async () => {
 
-  console.log("\n🧹 CLEANING TEST ENVIRONMENT...\n");
+  console.log("\n==============================");
+  console.log("CLEANING TEST ENVIRONMENT");
+  console.log("==============================\n");
 
   try {
 
+    // deja terminar queries pendientes
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // cerrar pool de DB
     await db.end();
 
-    console.log("🔌 DATABASE POOL CLOSED");
+    // seguridad extra para evitar teardown crash
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    console.log("DATABASE POOL CLOSED");
+
+    console.log("\n==============================");
+    console.log("TEST SUITE FINISHED");
+    console.log("If no failures appear above, everything is working correctly");
+    console.log("==============================\n");
 
   } catch (error) {
 
-    console.error("❌ ERROR CLOSING DB");
+    console.error("ERROR CLOSING DB");
     console.error(error);
 
   }

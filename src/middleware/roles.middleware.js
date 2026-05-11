@@ -1,27 +1,46 @@
 export const checkRole = (allowedRoles = []) => {
   return (req, res, next) => {
     try {
-      // El usuario debe venir del auth middleware
+      // ==========================
+      // VALIDACIÓN DE USER
+      // ==========================
       const user = req.user;
 
       if (!user) {
         return res.status(401).json({
-          error: "Unauthorized: no user found in request"
+          error: "Unauthorized: user not found in request"
         });
       }
 
-      // role requerido no permitido
-      if (!allowedRoles.includes(user.role)) {
+      // ==========================
+      // VALIDACIÓN DE ROLE EXISTENTE
+      // ==========================
+      if (!user.role) {
         return res.status(403).json({
-          error: `Forbidden: role '${user.role}' not allowed`
+          error: "Forbidden: user has no role assigned"
+        });
+      }
+
+      // ==========================
+      // VALIDACIÓN DE PERMISOS
+      // ==========================
+      const isAllowed = allowedRoles.includes(user.role);
+
+      if (!isAllowed) {
+        return res.status(403).json({
+          error: "Forbidden: insufficient permissions",
+          required: allowedRoles,
+          current: user.role
         });
       }
 
       next();
+
     } catch (err) {
+      console.error("ROLE MIDDLEWARE ERROR:", err);
+
       return res.status(500).json({
-        error: "Role middleware error",
-        details: err.message
+        error: "Role middleware internal error"
       });
     }
   };

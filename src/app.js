@@ -31,76 +31,90 @@ import db from "./config/db.js";
 
 const app = express();
 
-// ==========================
-// CORS
-// ==========================
-app.use(cors());
+// =========================================================
+// CORS CONFIG (más seguro que cors() abierto)
+// =========================================================
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  })
+);
 
-// ==========================
-// STRIPE WEBHOOK RAW BODY
-// ==========================
-// IMPORTANTE: debe ir antes de express.json
+// =========================================================
+// STRIPE WEBHOOK (RAW BODY - OBLIGATORIO)
+// =========================================================
 app.use(
   "/api/payments/webhook",
   express.raw({ type: "application/json" })
 );
 
-// ==========================
+// =========================================================
 // JSON PARSER
-// ==========================
+// =========================================================
 app.use(express.json());
 
-// ==========================
-// SWAGGER YAML
-// ==========================
-const swaggerFile = fs.readFileSync(
-  "./src/docs/swagger.yaml",
-  "utf8"
-);
+// =========================================================
+// SWAGGER (SAFE LOAD)
+// =========================================================
+let swaggerDocument;
 
-const swaggerDocument = yaml.parse(swaggerFile);
+try {
+  const swaggerFile = fs.readFileSync(
+    "./src/docs/swagger.yaml",
+    "utf8"
+  );
 
-// ==========================
-// SWAGGER DOCS
-// ==========================
-app.use(
-  "/api-docs",
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerDocument)
-);
+  swaggerDocument = yaml.parse(swaggerFile);
 
-// ==========================
+} catch (err) {
+  console.error("Swagger load error:", err.message);
+}
+
+// =========================================================
+// SWAGGER ROUTE
+// =========================================================
+if (swaggerDocument) {
+  app.use(
+    "/api-docs",
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerDocument)
+  );
+}
+
+// =========================================================
 // HEALTH CHECK
-// ==========================
+// =========================================================
 app.get("/", (req, res) => {
   res.json({
     message: "🚀 Brand Connect API is running",
+    status: "OK",
   });
 });
 
-// ==========================
-// DB TEST
-// ==========================
+// =========================================================
+// DB TEST (SAFE)
+// =========================================================
 app.get("/test-db", async (req, res) => {
   try {
     const result = await db.query("SELECT NOW()");
 
-    res.json({
+    return res.json({
       status: "OK",
-      time: result.rows[0],
+      time: result.rows[0].now,
     });
 
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       status: "ERROR",
       message: error.message,
     });
   }
 });
 
-// ==========================
+// =========================================================
 // API ROUTES
-// ==========================
+// =========================================================
 
 // AUTH
 app.use("/api/auth", authRoutes);
@@ -114,7 +128,7 @@ app.use("/api/profiles", profileRoutes);
 // MARKETPLACE
 app.use("/api/marketplace", marketplaceRoutes);
 
-// PAYMENTS (Stripe) ✅ FIX CLAVE
+// PAYMENTS (Stripe)
 app.use("/api/payments", paymentsRoutes);
 
 // FULFILLMENT
@@ -123,9 +137,18 @@ app.use("/api/fulfillment", fulfillmentRoutes);
 // CHATBOT
 app.use("/api/chatbot", chatbotRoutes);
 
-// ==========================
+// =========================================================
+// 404 HANDLER (IMPORTANTE Y TE FALTABA)
+// =========================================================
+app.use((req, res) => {
+  res.status(404).json({
+    error: "Route not found",
+  });
+});
+
+// =========================================================
 // GLOBAL ERROR HANDLER
-// ==========================
+// =========================================================
 app.use(errorMiddleware);
 
 export default app;

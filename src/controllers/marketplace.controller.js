@@ -1,35 +1,61 @@
 import db from "../config/db.js";
 
-// ==========================
-// CREAR SERVICIO (INFLUENCER)
-// ==========================
+/* =========================================================
+   GET ALL SERVICES (MARKETPLACE)
+========================================================= */
+export const getAllServices = async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT *
+      FROM influencer_services
+      ORDER BY service_id DESC
+    `);
+
+    return res.json(result.rows);
+
+  } catch (err) {
+    console.error("GET SERVICES ERROR:", err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+
+/* =========================================================
+   CREATE SERVICE
+========================================================= */
 export const createService = async (req, res) => {
   try {
     const {
       user_id,
-      influencer_name,
-      category,
+      title,
+      description,
       price,
-      is_trending,
-      status
+      category,
+      image,
+      tiktok,
+      profile_name
     } = req.body;
 
-    if (!user_id || !influencer_name || !price) {
-      return res.status(400).json({ error: "Missing required fields" });
+    if (!user_id || !title) {
+      return res.status(400).json({
+        error: "Missing required fields"
+      });
     }
 
     const result = await db.query(
-      `INSERT INTO influencer_services 
-      (user_id, influencer_name, category, price, is_trending, status)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO influencer_services
+      (user_id, title, description, price, category, image, tiktok, profile_name)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
       RETURNING *`,
       [
         user_id,
-        influencer_name,
-        category,
+        title,
+        description,
         price,
-        is_trending || false,
-        status || "available"
+        category,
+        image,
+        tiktok,
+        profile_name
       ]
     );
 
@@ -39,58 +65,50 @@ export const createService = async (req, res) => {
     });
 
   } catch (err) {
+    console.error("CREATE SERVICE ERROR:", err);
     return res.status(500).json({ error: err.message });
   }
 };
 
-// ==========================
-// OBTENER TODOS LOS SERVICIOS
-// ==========================
-export const getAllServices = async (req, res) => {
-  try {
-    const result = await db.query(
-      `SELECT * FROM influencer_services
-       ORDER BY service_id DESC`
-    );
 
-    return res.json(result.rows);
-
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-};
-
-// ==========================
-// SERVICIOS POR USUARIO
-// ==========================
+/* =========================================================
+   GET SERVICES BY USER
+========================================================= */
 export const getServicesByUser = async (req, res) => {
   try {
     const { user_id } = req.params;
 
     const result = await db.query(
-      `SELECT * FROM influencer_services
-       WHERE user_id = $1`,
+      `SELECT *
+       FROM influencer_services
+       WHERE user_id = $1
+       ORDER BY id DESC`,
       [user_id]
     );
 
     return res.json(result.rows);
 
   } catch (err) {
+    console.error("GET USER SERVICES ERROR:", err);
     return res.status(500).json({ error: err.message });
   }
 };
 
-// ==========================
-// UPDATE STATUS
-// ==========================
+
+/* =========================================================
+   UPDATE SERVICE STATUS
+========================================================= */
 export const updateServiceStatus = async (req, res) => {
   try {
-    const { service_id, status } = req.body;
+    const {
+      service_id,
+      status
+    } = req.body;
 
     const result = await db.query(
       `UPDATE influencer_services
        SET status = $1
-       WHERE service_id = $2
+       WHERE id = $2
        RETURNING *`,
       [status, service_id]
     );
@@ -101,6 +119,7 @@ export const updateServiceStatus = async (req, res) => {
     });
 
   } catch (err) {
+    console.error("UPDATE SERVICE ERROR:", err);
     return res.status(500).json({ error: err.message });
   }
 };
