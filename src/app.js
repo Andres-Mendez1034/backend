@@ -36,15 +36,12 @@ const app = express();
 // ==========================
 app.use(cors());
 
-/**
- * =========================================================
- * STRIPE WEBHOOK RAW BODY
- * =========================================================
- * Stripe necesita el body RAW para validar firma.
- * ESTE endpoint DEBE ir antes de express.json()
- */
+// ==========================
+// STRIPE WEBHOOK RAW BODY
+// ==========================
+// IMPORTANTE: debe ir antes de express.json
 app.use(
-  "/payments/webhook",
+  "/api/payments/webhook",
   express.raw({ type: "application/json" })
 );
 
@@ -86,10 +83,7 @@ app.get("/", (req, res) => {
 // ==========================
 app.get("/test-db", async (req, res) => {
   try {
-
-    const result = await db.query(
-      "SELECT NOW()"
-    );
+    const result = await db.query("SELECT NOW()");
 
     res.json({
       status: "OK",
@@ -97,7 +91,6 @@ app.get("/test-db", async (req, res) => {
     });
 
   } catch (error) {
-
     res.status(500).json({
       status: "ERROR",
       message: error.message,
@@ -113,19 +106,19 @@ app.get("/test-db", async (req, res) => {
 app.use("/api/auth", authRoutes);
 
 // USERS
-app.use("/users", userRoutes);
+app.use("/api/users", userRoutes);
 
 // PROFILES
-app.use("/profiles", profileRoutes);
+app.use("/api/profiles", profileRoutes);
 
 // MARKETPLACE
-app.use("/marketplace", marketplaceRoutes);
+app.use("/api/marketplace", marketplaceRoutes);
 
-// PAYMENTS (Stripe)
-app.use("/payments", paymentsRoutes);
+// PAYMENTS (Stripe) ✅ FIX CLAVE
+app.use("/api/payments", paymentsRoutes);
 
 // FULFILLMENT
-app.use("/fulfillment", fulfillmentRoutes);
+app.use("/api/fulfillment", fulfillmentRoutes);
 
 // CHATBOT
 app.use("/api/chatbot", chatbotRoutes);

@@ -14,7 +14,7 @@ const router = express.Router();
    CREATE STRIPE CHECKOUT SESSION
 ========================================================= */
 router.post(
-  "/checkout/:service_id",
+  "/create-checkout",
   authMiddleware,
   createCheckoutSession
 );
@@ -32,7 +32,7 @@ router.post(
    GET PAYMENT STATUS
 ========================================================= */
 router.get(
-  "/status/:order_id",
+  "/status/:paymentId",
   authMiddleware,
   getPaymentStatus
 );
