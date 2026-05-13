@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 
 import {
   createInfluencerProfile,
@@ -9,31 +10,12 @@ import {
 } from "../controllers/profiles.controller.js";
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
-/* =========================================================
-   CREATE INFLUENCER PROFILE
-========================================================= */
 router.post("/influencer", createInfluencerProfile);
-
-/* =========================================================
-   CREATE CREATOR PROFILE
-   (FIX: ruta que te estaba dando 404)
-========================================================= */
-router.post("/creator", createCreatorProfile);
-
-/* =========================================================
-   CREATE CLIENT PROFILE
-========================================================= */
+router.post("/creator", upload.single("profile_image"), createCreatorProfile); // ← multer aquí
 router.post("/client", createClientProfile);
-
-/* =========================================================
-   GET PROFILE BY USER ID
-========================================================= */
 router.get("/user/:user_id", getProfileByUser);
-
-/* =========================================================
-   UPDATE INFLUENCER PROFILE
-========================================================= */
 router.put("/influencer/:user_id", updateInfluencerProfile);
 
 export default router;

@@ -35,9 +35,9 @@ export const createInfluencerProfile = async (req, res) => {
       VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (user_id)
       DO UPDATE SET
-        full_name = EXCLUDED.full_name,
-        id_number = EXCLUDED.id_number,
-        location = EXCLUDED.location,
+        full_name  = EXCLUDED.full_name,
+        id_number  = EXCLUDED.id_number,
+        location   = EXCLUDED.location,
         tiktok_url = EXCLUDED.tiktok_url
       RETURNING *`,
       [user_id, full_name, id_number, location, tiktok_url]
@@ -59,8 +59,7 @@ export const createInfluencerProfile = async (req, res) => {
 
         if (tagResult.rows.length > 0) {
           await db.query(
-            `INSERT INTO profile_tags (profile_id, tag_id)
-             VALUES ($1, $2)`,
+            `INSERT INTO profile_tags (profile_id, tag_id) VALUES ($1, $2)`,
             [profile.profile_id, tagResult.rows[0].tag_id]
           );
         }
@@ -80,37 +79,99 @@ export const createInfluencerProfile = async (req, res) => {
 
 
 /* =========================================================
-   CREATOR PROFILE (CLEAN - SIN NICHO NI CIUDAD)
+   CREATOR PROFILE (COMPLETO CON MARKETPLACE INSERT)
 ========================================================= */
 export const createCreatorProfile = async (req, res) => {
   try {
     console.log("BODY RECEIVED:", req.body);
+    console.log("FILE RECEIVED:", req.file);
 
     const {
       user_id,
       full_name,
-      bio
+      age,
+      gender,
+      bio,
+      main_category,
+      collaboration_goal,
+      location,
+      tiktok_url,
+      instagram_url,
+      youtube_url,
+      followers,
+      engagement_rate,
     } = req.body;
 
     if (!user_id || !full_name) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    // Imagen en base64 si viene por multer
+    let profile_image = null;
+    if (req.file) {
+      profile_image = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+    }
+
+    // 1️⃣ GUARDAR EN creator_profiles
     const result = await db.query(
       `INSERT INTO creator_profiles
-      (user_id, full_name, bio)
-      VALUES ($1, $2, $3)
+      (
+        user_id, full_name, age, gender, bio,
+        main_category, collaboration_goal, location,
+        tiktok_url, instagram_url, youtube_url,
+        profile_image, followers, engagement_rate
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
       ON CONFLICT (user_id)
       DO UPDATE SET
-        full_name = EXCLUDED.full_name,
-        bio = EXCLUDED.bio
+        full_name          = EXCLUDED.full_name,
+        age                = EXCLUDED.age,
+        gender             = EXCLUDED.gender,
+        bio                = EXCLUDED.bio,
+        main_category      = EXCLUDED.main_category,
+        collaboration_goal = EXCLUDED.collaboration_goal,
+        location           = EXCLUDED.location,
+        tiktok_url         = EXCLUDED.tiktok_url,
+        instagram_url      = EXCLUDED.instagram_url,
+        youtube_url        = EXCLUDED.youtube_url,
+        profile_image      = EXCLUDED.profile_image,
+        followers          = EXCLUDED.followers,
+        engagement_rate    = EXCLUDED.engagement_rate,
+        updated_at         = NOW()
       RETURNING *`,
-      [user_id, full_name, bio]
+      [
+        user_id, full_name, age || null, gender || null, bio || null,
+        main_category || null, collaboration_goal || null, location || null,
+        tiktok_url || null, instagram_url || null, youtube_url || null,
+        profile_image, followers || 0, engagement_rate || 0
+      ]
     );
+
+    const profile = result.rows[0];
+
+    // 2️⃣ INSERTAR EN influencer_services → aparece en marketplace
+// 2️⃣ INSERTAR EN influencer_services → aparece en marketplace
+await db.query(
+  `INSERT INTO influencer_services
+    (user_id, influencer_name, category, price, is_trending, status)
+   VALUES ($1, $2, $3, $4, $5, $6)
+   ON CONFLICT (user_id)
+   DO UPDATE SET
+     influencer_name = EXCLUDED.influencer_name,
+     category        = EXCLUDED.category`,
+  [
+    user_id,
+    full_name,
+    main_category || null,
+    0,
+    false,
+    "available"
+  ]
+);
 
     return res.status(201).json({
       message: "Creator profile saved",
-      profile: result.rows[0]
+      profile
     });
 
   } catch (err) {
@@ -145,21 +206,16 @@ export const createClientProfile = async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6,$7)
       ON CONFLICT (user_id)
       DO UPDATE SET
-        business_name = EXCLUDED.business_name,
-        owner_name = EXCLUDED.owner_name,
-        business_type = EXCLUDED.business_type,
-        location = EXCLUDED.location,
+        business_name   = EXCLUDED.business_name,
+        owner_name      = EXCLUDED.owner_name,
+        business_type   = EXCLUDED.business_type,
+        location        = EXCLUDED.location,
         awareness_level = EXCLUDED.awareness_level,
-        main_goal = EXCLUDED.main_goal
+        main_goal       = EXCLUDED.main_goal
       RETURNING *`,
       [
-        user_id,
-        business_name,
-        owner_name,
-        business_type,
-        location,
-        awareness_level,
-        main_goal
+        user_id, business_name, owner_name,
+        business_type, location, awareness_level, main_goal
       ]
     );
 
@@ -194,7 +250,7 @@ export const getProfileByUser = async (req, res) => {
 
     return res.json({
       influencer: influencer.rows[0] || null,
-      client: client.rows[0] || null
+      client:     client.rows[0]     || null
     });
 
   } catch (err) {
@@ -227,10 +283,7 @@ export const updateInfluencerProfile = async (req, res) => {
     }
 
     const values = keys.map(k => updates[k]);
-
-    const setQuery = keys
-      .map((key, i) => `${key} = $${i + 2}`)
-      .join(", ");
+    const setQuery = keys.map((key, i) => `${key} = $${i + 2}`).join(", ");
 
     const result = await db.query(
       `UPDATE influencer_profiles
