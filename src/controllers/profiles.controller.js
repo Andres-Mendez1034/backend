@@ -106,13 +106,11 @@ export const createCreatorProfile = async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Imagen en base64 si viene por multer
     let profile_image = null;
     if (req.file) {
       profile_image = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
     }
 
-    // 1️⃣ GUARDAR EN creator_profiles
     const result = await db.query(
       `INSERT INTO creator_profiles
       (
@@ -149,25 +147,23 @@ export const createCreatorProfile = async (req, res) => {
 
     const profile = result.rows[0];
 
-    // 2️⃣ INSERTAR EN influencer_services → aparece en marketplace
-// 2️⃣ INSERTAR EN influencer_services → aparece en marketplace
-await db.query(
-  `INSERT INTO influencer_services
-    (user_id, influencer_name, category, price, is_trending, status)
-   VALUES ($1, $2, $3, $4, $5, $6)
-   ON CONFLICT (user_id)
-   DO UPDATE SET
-     influencer_name = EXCLUDED.influencer_name,
-     category        = EXCLUDED.category`,
-  [
-    user_id,
-    full_name,
-    main_category || null,
-    0,
-    false,
-    "available"
-  ]
-);
+    await db.query(
+      `INSERT INTO influencer_services
+        (user_id, influencer_name, category, price, is_trending, status)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         influencer_name = EXCLUDED.influencer_name,
+         category        = EXCLUDED.category`,
+      [
+        user_id,
+        full_name,
+        main_category || null,
+        0,
+        false,
+        "available"
+      ]
+    );
 
     return res.status(201).json({
       message: "Creator profile saved",
@@ -300,6 +296,88 @@ export const updateInfluencerProfile = async (req, res) => {
 
   } catch (err) {
     console.error("UPDATE ERROR:", err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+
+/* =========================================================
+   GET CREATOR BY SERVICE_ID  ← NUEVO
+   El marketplace navega a /creator/:id usando service_id
+   de influencer_services. Este endpoint hace el JOIN con
+   creator_profiles para devolver todos los datos del perfil.
+========================================================= */
+export const getCreatorById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.query(
+      `SELECT
+         cp.user_id,
+         cp.full_name,
+         cp.age,
+         cp.gender,
+         cp.bio,
+         cp.main_category,
+         cp.collaboration_goal,
+         cp.location,
+         cp.tiktok_url,
+         cp.instagram_url,
+         cp.youtube_url,
+         cp.profile_image,
+         cp.followers,
+         cp.engagement_rate,
+         cp.updated_at,
+         s.service_id,
+         s.price,
+         s.status,
+         s.is_trending
+       FROM influencer_services s
+       JOIN creator_profiles cp ON cp.user_id = s.user_id
+       WHERE s.service_id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Creator not found" });
+    }
+
+    const row = result.rows[0];
+
+    // Construimos el objeto con la forma que espera el frontend
+    const profile = {
+      id:         row.service_id,
+      user_id:    row.user_id,
+      name:       row.full_name,
+      age:        row.age,
+      gender:     row.gender,
+      bio:        row.bio,
+      avatar:     row.profile_image,
+      location:   row.location,
+      tags:       row.main_category ? [row.main_category] : [],
+      willing:    row.collaboration_goal ? [row.collaboration_goal] : [],
+      socials: {
+        instagram: row.instagram_url  || null,
+        tiktok:    row.tiktok_url     || null,
+        youtube:   row.youtube_url    || null,
+      },
+      stats: {
+        followers:   row.followers      ? Number(row.followers)      : null,
+        engagement:  row.engagement_rate ? Number(row.engagement_rate) : null,
+        avgLikes:    null,
+        avgComments: null,
+        reach:       null,
+        platforms:   [],
+      },
+      price:      row.price,
+      status:     row.status,
+      trending:   row.is_trending,
+    };
+
+    return res.status(200).json({ profile });
+
+  } catch (err) {
+    console.error("GET CREATOR BY ID ERROR:", err);
     return res.status(500).json({ error: err.message });
   }
 };
