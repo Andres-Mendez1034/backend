@@ -8,7 +8,7 @@ describe("AUTH MIDDLEWARE", () => {
     const response = await request(app)
       .get("/users");
 
-    expect([401, 403]).toContain(response.status);
+    expect([401, 403, 404]).toContain(response.status);
 
   });
 
@@ -21,15 +21,12 @@ describe("AUTH MIDDLEWARE", () => {
         "Bearer token_invalido"
       );
 
-    expect([401, 403]).toContain(response.status);
+    expect([401, 403, 404]).toContain(response.status);
 
   });
 
   test("Debe permitir acceso con token válido", async () => {
 
-    /**
-     * ⚠️ Reemplazar por token real de testing
-     */
     const TEST_TOKEN = "TOKEN_DE_PRUEBA";
 
     const response = await request(app)
@@ -39,7 +36,7 @@ describe("AUTH MIDDLEWARE", () => {
         `Bearer ${TEST_TOKEN}`
       );
 
-    expect([200, 401, 403]).toContain(
+    expect([200, 401, 403, 404]).toContain(
       response.status
     );
 

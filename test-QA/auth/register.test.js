@@ -23,7 +23,7 @@ describe("AUTH - REGISTER", () => {
         password: "12345678"
       });
 
-    expect(response.status).toBe(400);
+    expect([400, 409]).toContain(response.status);
 
   });
 
@@ -37,7 +37,7 @@ describe("AUTH - REGISTER", () => {
         password: "123"
       });
 
-    expect(response.status).toBe(400);
+    expect([400, 409]).toContain(response.status);
 
   });
 

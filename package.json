@@ -17,9 +17,9 @@
   "scripts": {
     "dev": "nodemon src/bootstrap.js",
     "start": "node src/bootstrap.js",
-    "test": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
-    "test:watch": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-    "test:coverage": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
+    "test": "cross-env NODE_ENV=test node_modules/.bin/jest --runInBand --verbose",
+    "test:watch": "cross-env NODE_ENV=test node_modules/.bin/jest --watch --verbose",
+    "test:coverage": "cross-env NODE_ENV=test node_modules/.bin/jest --coverage"
   },
   "dependencies": {
     "axios": "^1.16.0",
@@ -39,24 +39,12 @@
     "yaml": "^2.8.1"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.5",
+    "babel-jest": "^30.4.1",
     "cross-env": "^10.1.0",
     "jest": "^30.4.2",
     "nodemon": "^3.1.0",
     "supertest": "^7.2.2"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "verbose": true,
-    "transform": {},
-    "testMatch": [
-      "**/*.test.js"
-    ],
-    "setupFilesAfterEnv": [
-      "<rootDir>/test-QA/setup/setup.js"
-    ],
-    "reporters": [
-      "default",
-      "<rootDir>/test-QA/setup/test-reporter.js"
-    ]
   }
 }

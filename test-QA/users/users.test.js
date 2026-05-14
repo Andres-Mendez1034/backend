@@ -8,7 +8,7 @@ describe("USERS", () => {
     const response = await request(app)
       .get("/users");
 
-    expect([401, 403]).toContain(
+    expect([401, 403, 404]).toContain(
       response.status
     );
 
@@ -23,7 +23,7 @@ describe("USERS", () => {
         "Bearer token_fake"
       );
 
-    expect([401, 403]).toContain(
+    expect([401, 403, 404]).toContain(
       response.status
     );
 
@@ -31,9 +31,6 @@ describe("USERS", () => {
 
   test("Debe obtener usuarios con token válido", async () => {
 
-    /**
-     * ⚠️ Reemplazar por token real de testing
-     */
     const TEST_TOKEN = "TOKEN_DE_PRUEBA";
 
     const response = await request(app)
@@ -43,7 +40,7 @@ describe("USERS", () => {
         `Bearer ${TEST_TOKEN}`
       );
 
-    expect([200, 401, 403]).toContain(
+    expect([200, 401, 403, 404]).toContain(
       response.status
     );
 

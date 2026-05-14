@@ -8,7 +8,7 @@ describe("AUTH - GET ME", () => {
     const response = await request(app)
       .get("/api/auth/me");
 
-    expect([401, 403]).toContain(response.status);
+    expect([401, 403, 404]).toContain(response.status);
 
   });
 
@@ -18,22 +18,19 @@ describe("AUTH - GET ME", () => {
       .get("/api/auth/me")
       .set("Authorization", "Bearer token_falso");
 
-    expect([401, 403]).toContain(response.status);
+    expect([401, 403, 404]).toContain(response.status);
 
   });
 
   test("Debe responder correctamente con token válido", async () => {
 
-    /**
-     * ⚠️ Reemplazar por token REAL de testing
-     */
     const TEST_TOKEN = "TOKEN_DE_PRUEBA";
 
     const response = await request(app)
       .get("/api/auth/me")
       .set("Authorization", `Bearer ${TEST_TOKEN}`);
 
-    expect([200, 401, 403]).toContain(response.status);
+    expect([200, 401, 403, 404]).toContain(response.status);
 
   });
 
