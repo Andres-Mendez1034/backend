@@ -28,7 +28,7 @@ export const getPlans = async (req, res, next) => {
 ========================================================= */
 export const createSubscriptionCheckout = async (req, res, next) => {
   try {
-    const user_id  = req.user?.id;
+    const user_id      = req.user?.id;
     const { planName } = req.body;
 
     if (!user_id) {
@@ -104,7 +104,7 @@ export const createSubscriptionCheckout = async (req, res, next) => {
 };
 
 /* =========================================================
-   STRIPE WEBHOOK — marca como pagado y envía email
+   STRIPE WEBHOOK — marca como pagado, guarda en payments y envía email
    POST /subscriptions/webhook
 ========================================================= */
 export const handleSubscriptionWebhook = async (req, res) => {
@@ -127,7 +127,7 @@ export const handleSubscriptionWebhook = async (req, res) => {
 
       if (!subscriptionId) return res.status(200).json({ received: true });
 
-      // 1. Marcar como pagado
+      // 1. Marcar suscripción como pagada
       await db.query(
         `UPDATE user_subscriptions
          SET status = 'paid',
@@ -137,7 +137,18 @@ export const handleSubscriptionWebhook = async (req, res) => {
         [session.payment_intent, subscriptionId]
       );
 
-      // 2. Obtener datos del usuario y plan para el email
+      // 2. ✅ Insertar en payments para que aparezca en el admin
+      const amountTotal = session.amount_total ?? 0;  // en centavos
+      const currency    = session.currency ?? "usd";
+
+      await db.query(
+        `INSERT INTO payments (user_id, amount, currency, status, stripe_session_id, created_at)
+         VALUES ($1, $2, $3, 'completed', $4, NOW())
+         ON CONFLICT (stripe_session_id) DO NOTHING`,
+        [userId, amountTotal / 100, currency, session.id]
+      );
+
+      // 3. Email de confirmación
       const userResult = await db.query(
         `SELECT name, email FROM users WHERE id = $1`,
         [userId]

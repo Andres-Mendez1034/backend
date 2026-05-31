@@ -172,7 +172,7 @@ export const verificationEmailTemplate = ({ name, verifyUrl }) => `
               </table>
 
               <p style="margin:0 0 6px;font-size:13px;color:#9ca3af;text-align:center;">
-                Este enlace expira en <strong>24 horas</strong>.
+                Este enlace expira en <strong>2 horas</strong>.
               </p>
               <p style="margin:0;font-size:13px;color:#9ca3af;text-align:center;">
                 Si no creaste esta cuenta, ignora este correo.

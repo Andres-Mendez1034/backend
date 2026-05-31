@@ -52,7 +52,7 @@ export const register = async (req, res) => {
 
     // ── Generar token de verificación ──
     const emailToken   = crypto.randomBytes(32).toString("hex");
-    const emailExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+const emailExpires = new Date(Date.now() + 2 * 60 * 1000); // 2 minutos
 
     await db.query(
       `UPDATE users

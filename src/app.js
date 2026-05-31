@@ -25,6 +25,8 @@ import subscriptionsRoutes from "./subscriptions/subscriptions.routes.js";
 // MIDDLEWARES
 // ==========================
 import { errorMiddleware } from "./middleware/error.middleware.js";
+import adminRoutes from "./routes/admin.routes.js";
+
 
 // ==========================
 // DB
@@ -108,6 +110,7 @@ app.use("/api/fulfillment",   fulfillmentRoutes);
 app.use("/api/chatbot",       chatbotRoutes);
 app.use("/api/instagram",     instagramRoutes);
 app.use("/api/subscriptions", subscriptionsRoutes);
+app.use("/api/admin", adminRoutes);
 
 // =========================================================
 // 404 HANDLER
