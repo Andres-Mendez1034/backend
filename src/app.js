@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import fs from "fs";
 import yaml from "yaml";
+import instagramRoutes from "./routes/instagram.routes.js";
 
 // ==========================
 // SWAGGER
@@ -136,6 +137,9 @@ app.use("/api/fulfillment", fulfillmentRoutes);
 
 // CHATBOT
 app.use("/api/chatbot", chatbotRoutes);
+
+//api instagram 
+app.use("/api/instagram", instagramRoutes);
 
 // =========================================================
 // 404 HANDLER (IMPORTANTE Y TE FALTABA)
