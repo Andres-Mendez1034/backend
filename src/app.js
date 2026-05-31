@@ -19,7 +19,7 @@ import marketplaceRoutes from "./routes/marketplace.routes.js";
 import chatbotRoutes from "./routes/chatbot.routes.js";
 import fulfillmentRoutes from "./routes/fulfillment.routes.js";
 import paymentsRoutes from "./payments/payments.routes.js";
-
+import subscriptionsRoutes from "./subscriptions/subscriptions.routes.js";
 // ==========================
 // MIDDLEWARES
 // ==========================
@@ -140,6 +140,8 @@ app.use("/api/chatbot", chatbotRoutes);
 
 //api instagram 
 app.use("/api/instagram", instagramRoutes);
+// SUBSCRIPTIONS
+app.use("/api/subscriptions", subscriptionsRoutes);
 
 // =========================================================
 // 404 HANDLER (IMPORTANTE Y TE FALTABA)

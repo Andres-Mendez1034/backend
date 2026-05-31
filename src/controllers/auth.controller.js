@@ -1,5 +1,6 @@
 import { registerUser, loginUser } from "../services/auth.service.js";
 import speakeasy from "speakeasy";
+import jwt from "jsonwebtoken";
 import db from "../config/db.js";
 
 /* =========================================================
@@ -20,45 +21,6 @@ const logError = (type, step, err) => {
 /* =========================================================
    REGISTER
 ========================================================= */
-
-/**
- * @openapi
- * /api/auth/register:
- *   post:
- *     summary: Register new user with MFA setup
- *     tags:
- *       - Auth
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *               - name
- *             properties:
- *               email:
- *                 type: string
- *                 example: test@email.com
- *               password:
- *                 type: string
- *                 example: 123456
- *               name:
- *                 type: string
- *                 example: John Doe
- *               role:
- *                 type: string
- *                 example: client
- *     responses:
- *       201:
- *         description: User created with MFA enabled
- *       409:
- *         description: User already exists
- *       500:
- *         description: Server error
- */
 export const register = async (req, res) => {
   const TYPE = "REGISTER";
 
@@ -82,12 +44,7 @@ export const register = async (req, res) => {
       });
     }
 
-    const user = await registerUser({
-      email,
-      password,
-      name,
-      role,
-    });
+    const user = await registerUser({ email, password, name, role });
 
     const secret = speakeasy.generateSecret({
       name: `BrandConnect (${email})`,
@@ -109,48 +66,13 @@ export const register = async (req, res) => {
 
   } catch (err) {
     logError(TYPE, "FATAL", err);
-
-    return res.status(500).json({
-      error: err.message,
-    });
+    return res.status(500).json({ error: err.message });
   }
 };
 
 /* =========================================================
    LOGIN
 ========================================================= */
-
-/**
- * @openapi
- * /api/auth/login:
- *   post:
- *     summary: Login user (MFA optional)
- *     tags:
- *       - Auth
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *                 example: test@email.com
- *               password:
- *                 type: string
- *                 example: 123456
- *     responses:
- *       200:
- *         description: Login success or MFA required
- *       400:
- *         description: Missing fields
- *       500:
- *         description: Server error
- */
 export const login = async (req, res) => {
   const TYPE = "LOGIN";
 
@@ -164,8 +86,16 @@ export const login = async (req, res) => {
     const user = await loginUser({ email, password });
 
     if (!user.mfa_enabled) {
+      // ✅ Sin MFA: generar JWT directo
+      const token = jwt.sign(
+        { id: user.id, email: user.email, role: user.role, mfa: false },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
       return res.json({
         message: "Login successful",
+        token,
         user,
         mfaRequired: false,
       });
@@ -179,48 +109,13 @@ export const login = async (req, res) => {
 
   } catch (err) {
     logError(TYPE, "FATAL", err);
-
-    return res.status(500).json({
-      error: err.message,
-    });
+    return res.status(500).json({ error: err.message });
   }
 };
 
 /* =========================================================
-   VERIFY MFA
+   VERIFY MFA — ✅ GENERA JWT AQUÍ
 ========================================================= */
-
-/**
- * @openapi
- * /api/auth/verify-mfa:
- *   post:
- *     summary: Verify MFA token
- *     tags:
- *       - Auth
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - token
- *             properties:
- *               email:
- *                 type: string
- *                 example: test@email.com
- *               token:
- *                 type: string
- *                 example: "123456"
- *     responses:
- *       200:
- *         description: MFA verified successfully
- *       400:
- *         description: Invalid MFA code or missing config
- *       500:
- *         description: Server error
- */
 export const verifyMFA = async (req, res) => {
   const TYPE = "MFA";
 
@@ -235,9 +130,7 @@ export const verifyMFA = async (req, res) => {
     const user = result.rows[0];
 
     if (!user || !user.mfa_secret) {
-      return res.status(400).json({
-        error: "MFA not configured",
-      });
+      return res.status(400).json({ error: "MFA not configured" });
     }
 
     const cleanToken = token?.toString().trim();
@@ -250,56 +143,34 @@ export const verifyMFA = async (req, res) => {
     });
 
     if (!verified) {
-      return res.status(400).json({
-        error: "Invalid MFA code",
-      });
+      return res.status(400).json({ error: "Invalid MFA code" });
     }
+
+    // ✅ MFA OK: generar JWT real
+    const jwtToken = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, mfa: true },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    delete user.password_hash;
+    delete user.mfa_secret;
 
     return res.json({
       success: true,
+      token: jwtToken,
       user,
     });
 
   } catch (err) {
     logError(TYPE, "FATAL", err);
-
-    return res.status(500).json({
-      error: err.message,
-    });
+    return res.status(500).json({ error: err.message });
   }
 };
 
 /* =========================================================
    GET MFA QR
 ========================================================= */
-
-/**
- * @openapi
- * /api/auth/mfa/qr:
- *   post:
- *     summary: Get MFA QR URL
- *     tags:
- *       - Auth
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *             properties:
- *               email:
- *                 type: string
- *                 example: test@email.com
- *     responses:
- *       200:
- *         description: QR URL generated
- *       400:
- *         description: MFA not configured
- *       500:
- *         description: Server error
- */
 export const getMFAQR = async (req, res) => {
   try {
     const { email } = req.body;
@@ -312,20 +183,14 @@ export const getMFAQR = async (req, res) => {
     const user = result.rows[0];
 
     if (!user?.mfa_secret) {
-      return res.status(400).json({
-        error: "MFA not configured",
-      });
+      return res.status(400).json({ error: "MFA not configured" });
     }
 
     const otpauth_url = `otpauth://totp/BrandConnect:${email}?secret=${user.mfa_secret}&issuer=BrandConnect`;
 
-    return res.json({
-      otpauth_url,
-    });
+    return res.json({ otpauth_url });
 
   } catch (err) {
-    return res.status(500).json({
-      error: err.message,
-    });
+    return res.status(500).json({ error: err.message });
   }
 };
