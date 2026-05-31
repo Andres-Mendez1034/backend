@@ -20,6 +20,7 @@ import chatbotRoutes from "./routes/chatbot.routes.js";
 import fulfillmentRoutes from "./routes/fulfillment.routes.js";
 import paymentsRoutes from "./payments/payments.routes.js";
 import subscriptionsRoutes from "./subscriptions/subscriptions.routes.js";
+
 // ==========================
 // MIDDLEWARES
 // ==========================
@@ -33,7 +34,7 @@ import db from "./config/db.js";
 const app = express();
 
 // =========================================================
-// CORS CONFIG (más seguro que cors() abierto)
+// CORS CONFIG
 // =========================================================
 app.use(
   cors({
@@ -43,10 +44,15 @@ app.use(
 );
 
 // =========================================================
-// STRIPE WEBHOOK (RAW BODY - OBLIGATORIO)
+// STRIPE WEBHOOKS (RAW BODY - OBLIGATORIO, ANTES DE express.json)
 // =========================================================
 app.use(
   "/api/payments/webhook",
+  express.raw({ type: "application/json" })
+);
+
+app.use(
+  "/api/subscriptions/webhook",
   express.raw({ type: "application/json" })
 );
 
@@ -61,95 +67,53 @@ app.use(express.json());
 let swaggerDocument;
 
 try {
-  const swaggerFile = fs.readFileSync(
-    "./src/docs/swagger.yaml",
-    "utf8"
-  );
-
+  const swaggerFile = fs.readFileSync("./src/docs/swagger.yaml", "utf8");
   swaggerDocument = yaml.parse(swaggerFile);
-
 } catch (err) {
   console.error("Swagger load error:", err.message);
 }
 
-// =========================================================
-// SWAGGER ROUTE
-// =========================================================
 if (swaggerDocument) {
-  app.use(
-    "/api-docs",
-    swaggerUi.serve,
-    swaggerUi.setup(swaggerDocument)
-  );
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 }
 
 // =========================================================
 // HEALTH CHECK
 // =========================================================
 app.get("/", (req, res) => {
-  res.json({
-    message: "🚀 Brand Connect API is running",
-    status: "OK",
-  });
+  res.json({ message: "🚀 Brand Connect API is running", status: "OK" });
 });
 
 // =========================================================
-// DB TEST (SAFE)
+// DB TEST
 // =========================================================
 app.get("/test-db", async (req, res) => {
   try {
     const result = await db.query("SELECT NOW()");
-
-    return res.json({
-      status: "OK",
-      time: result.rows[0].now,
-    });
-
+    return res.json({ status: "OK", time: result.rows[0].now });
   } catch (error) {
-    return res.status(500).json({
-      status: "ERROR",
-      message: error.message,
-    });
+    return res.status(500).json({ status: "ERROR", message: error.message });
   }
 });
 
 // =========================================================
 // API ROUTES
 // =========================================================
-
-// AUTH
-app.use("/api/auth", authRoutes);
-
-// USERS
-app.use("/api/users", userRoutes);
-
-// PROFILES
-app.use("/api/profiles", profileRoutes);
-
-// MARKETPLACE
-app.use("/api/marketplace", marketplaceRoutes);
-
-// PAYMENTS (Stripe)
-app.use("/api/payments", paymentsRoutes);
-
-// FULFILLMENT
-app.use("/api/fulfillment", fulfillmentRoutes);
-
-// CHATBOT
-app.use("/api/chatbot", chatbotRoutes);
-
-//api instagram 
-app.use("/api/instagram", instagramRoutes);
-// SUBSCRIPTIONS
+app.use("/api/auth",          authRoutes);
+app.use("/api/users",         userRoutes);
+app.use("/api/profiles",      profileRoutes);
+app.use("/api/marketplace",   marketplaceRoutes);
+app.use("/api/payments",      paymentsRoutes);
+app.use("/api/fulfillment",   fulfillmentRoutes);
+app.use("/api/chatbot",       chatbotRoutes);
+app.use("/api/instagram",     instagramRoutes);
 app.use("/api/subscriptions", subscriptionsRoutes);
 
 // =========================================================
-// 404 HANDLER (IMPORTANTE Y TE FALTABA)
+// 404 HANDLER
 // =========================================================
 app.use((req, res) => {
-  res.status(404).json({
-    error: "Route not found",
-  });
+  res.status(404).json({ error: "Route not found" });
 });
 
 // =========================================================
