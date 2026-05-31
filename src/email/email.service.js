@@ -1,6 +1,6 @@
 import PDFDocument from "pdfkit";
 import transporter from "./email.client.js";
-import { paymentConfirmationTemplate } from "./email.template.js";
+import { paymentConfirmationTemplate, verificationEmailTemplate } from "./email.template.js";
 
 /* =========================================================
    GENERATE PDF INVOICE (in memory)
@@ -125,26 +125,14 @@ export const sendPaymentConfirmationEmail = async ({
   paidAt,
 }) => {
   try {
-    // 1. Generar PDF
     const pdfBuffer = await generateInvoicePDF({
-      userName,
-      userEmail,
-      planLabel,
-      planPrice,
-      orderId,
-      paidAt,
+      userName, userEmail, planLabel, planPrice, orderId, paidAt,
     });
 
-    // 2. Generar HTML del correo
     const html = paymentConfirmationTemplate({
-      userName,
-      planLabel,
-      planPrice,
-      orderId,
-      paidAt,
+      userName, planLabel, planPrice, orderId, paidAt,
     });
 
-    // 3. Enviar
     await transporter.sendMail({
       from:    process.env.SMTP_FROM,
       to:      userEmail,
@@ -159,9 +147,31 @@ export const sendPaymentConfirmationEmail = async ({
       ],
     });
 
-    console.log(`📧 Email enviado a ${userEmail}`);
+    console.log(`📧 Email de pago enviado a ${userEmail}`);
   } catch (err) {
-    // No bloqueamos el flujo principal si falla el email
-    console.error("🔥 EMAIL ERROR:", err.message);
+    console.error("🔥 EMAIL PAYMENT ERROR:", err.message);
+  }
+};
+
+/* =========================================================
+   SEND VERIFICATION EMAIL
+========================================================= */
+export const sendVerificationEmail = async ({ name, email, token }) => {
+  try {
+    const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+
+    const html = verificationEmailTemplate({ name, verifyUrl });
+
+    await transporter.sendMail({
+      from:    process.env.SMTP_FROM,
+      to:      email,
+      subject: "Verifica tu cuenta en BrandConnect",
+      html,
+    });
+
+    console.log(`📧 Email de verificación enviado a ${email}`);
+  } catch (err) {
+    console.error("🔥 EMAIL VERIFICATION ERROR:", err.message);
+    throw err;
   }
 };
