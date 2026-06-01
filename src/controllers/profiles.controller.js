@@ -338,6 +338,7 @@ export const getCreatorById = async (req, res) => {
 
     const result = await db.query(
       `SELECT
+         cp.id AS creator_profile_id,
          cp.user_id,
          cp.full_name,
          cp.age,
@@ -370,7 +371,7 @@ export const getCreatorById = async (req, res) => {
     const row = result.rows[0];
 
     const profile = {
-      id:         row.service_id,
+      id:         row.creator_profile_id,
       user_id:    row.user_id,
       name:       row.full_name,
       age:        row.age,

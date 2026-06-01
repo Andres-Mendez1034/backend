@@ -12,21 +12,21 @@ import swaggerUi from "swagger-ui-express";
 // ==========================
 // ROUTES
 // ==========================
-import authRoutes from "./routes/auth.routes.js";
-import userRoutes from "./routes/user.routes.js";
-import profileRoutes from "./routes/profiles.routes.js";
-import marketplaceRoutes from "./routes/marketplace.routes.js";
-import chatbotRoutes from "./routes/chatbot.routes.js";
-import fulfillmentRoutes from "./routes/fulfillment.routes.js";
-import paymentsRoutes from "./payments/payments.routes.js";
+import authRoutes         from "./routes/auth.routes.js";
+import userRoutes         from "./routes/user.routes.js";
+import profileRoutes      from "./routes/profiles.routes.js";
+import marketplaceRoutes  from "./routes/marketplace.routes.js";
+import chatbotRoutes      from "./routes/chatbot.routes.js";
+import fulfillmentRoutes  from "./routes/fulfillment.routes.js";
+import paymentsRoutes     from "./payments/payments.routes.js";
 import subscriptionsRoutes from "./subscriptions/subscriptions.routes.js";
+import chatRoutes         from "./routes/chat.routes.js";
 
 // ==========================
 // MIDDLEWARES
 // ==========================
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import adminRoutes from "./routes/admin.routes.js";
-
 
 // ==========================
 // DB
@@ -110,7 +110,8 @@ app.use("/api/fulfillment",   fulfillmentRoutes);
 app.use("/api/chatbot",       chatbotRoutes);
 app.use("/api/instagram",     instagramRoutes);
 app.use("/api/subscriptions", subscriptionsRoutes);
-app.use("/api/admin", adminRoutes);
+app.use("/api/admin",         adminRoutes);
+app.use("/api/chat",          chatRoutes);
 
 // =========================================================
 // 404 HANDLER
