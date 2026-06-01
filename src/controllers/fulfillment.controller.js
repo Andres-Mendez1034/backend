@@ -33,6 +33,11 @@ export const getFulfillmentByOrder = async (req, res) => {
 export const acceptOrder = async (req, res) => {
   try {
     const { order_id } = req.body;
+
+    if (!order_id) {
+      return res.status(422).json({ error: "order_id is required" });
+    }
+
     const user_id = req.user.id;
 
     // validar que el influencer sea dueño del servicio
@@ -74,6 +79,10 @@ export const deliverService = async (req, res) => {
   try {
     const { order_id, delivery_data, notes } = req.body;
 
+    if (!order_id || !delivery_data) {
+      return res.status(422).json({ error: "order_id and delivery_data are required" });
+    }
+
     const result = await db.query(
       `UPDATE service_fulfillment
        SET status = 'delivered',
@@ -102,6 +111,11 @@ export const deliverService = async (req, res) => {
 export const completeOrder = async (req, res) => {
   try {
     const { order_id } = req.body;
+
+    if (!order_id) {
+      return res.status(422).json({ error: "order_id is required" });
+    }
+
     const user_id = req.user.id;
 
     const order = await db.query(

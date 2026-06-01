@@ -9,8 +9,8 @@ import authMiddleware from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-// POST /api/payments/create-checkout/:service_id
-router.post("/create-checkout/:service_id", authMiddleware, createCheckoutSession);
+// POST /api/payments/create-checkout/:service_id (optional)
+router.post("/create-checkout/:service_id?", authMiddleware, createCheckoutSession);
 
 // POST /api/payments/checkout-offer  ← nuevo (oferta negociada en chat)
 router.post("/checkout-offer", authMiddleware, createOfferCheckout);

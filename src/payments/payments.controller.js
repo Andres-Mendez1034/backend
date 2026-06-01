@@ -16,6 +16,10 @@ export const createCheckoutSession = async (req, res, next) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
+    if (!service_id) {
+      return res.status(400).json({ error: "service_id is required" });
+    }
+
     const serviceResult = await db.query(
       `SELECT * FROM influencer_services WHERE service_id = $1`,
       [service_id]
@@ -203,7 +207,7 @@ export const handleStripeWebhook = async (req, res) => {
 
   } catch (error) {
     console.error("Webhook error:", error.message);
-    return res.status(400).send(`Webhook Error: ${error.message}`);
+    return res.status(400).json({ error: "Webhook Error" });
   }
 };
 
