@@ -1,4 +1,4 @@
-require("./env.test.js");
+require("./env.setup.js");
 const dbModule = require("../../src/config/db.js");
 const db = dbModule.default || dbModule;
 

@@ -12,7 +12,7 @@ module.exports = {
 
   testMatch: ["**/test-QA/**/*.test.js"],
 
-  setupFiles: ["<rootDir>/test-QA/setup/env.test.js"],
+  setupFiles: ["<rootDir>/test-QA/setup/env.setup.js"],
 
   setupFilesAfterEnv: ["<rootDir>/test-QA/setup/setup.js"],
 

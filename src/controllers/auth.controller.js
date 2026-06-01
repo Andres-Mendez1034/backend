@@ -4,6 +4,7 @@ import speakeasy from "speakeasy";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import db from "../config/db.js";
+import { isValidEmail, isValidPassword } from "../utils/validators.js";
 
 /* =========================================================
    LOGGER HELPERS
@@ -159,6 +160,15 @@ export const login = async (req, res) => {
       return res.status(400).json({ error: "Missing fields" });
     }
 
+    // Validate format
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+
+    if (!isValidPassword(password)) {
+      return res.status(400).json({ error: "Invalid password" });
+    }
+
     const user = await loginUser({ email, password });
 
     // ── Bloquear si no verificó email ──
@@ -194,6 +204,16 @@ export const login = async (req, res) => {
 
   } catch (err) {
     logError(TYPE, "FATAL", err);
+
+    // Map common service errors to appropriate HTTP codes
+    if (err.message === "User not found") {
+      return res.status(404).json({ error: err.message });
+    }
+
+    if (err.message === "Invalid credentials") {
+      return res.status(401).json({ error: err.message });
+    }
+
     return res.status(500).json({ error: err.message });
   }
 };

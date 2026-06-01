@@ -105,6 +105,8 @@ app.get("/test-db", async (req, res) => {
 app.use("/api/auth",          authRoutes);
 app.use("/api/users",         userRoutes);
 app.use("/api/profiles",      profileRoutes);
+// Backwards-compatible mount (some tests and clients use /profiles without /api)
+app.use("/profiles",          profileRoutes);
 app.use("/api/marketplace",   marketplaceRoutes);
 app.use("/api/payments",      paymentsRoutes);
 app.use("/api/fulfillment",   fulfillmentRoutes);
