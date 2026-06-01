@@ -10,6 +10,8 @@ export const createInfluencerProfile = async (req, res) => {
       full_name,
       id_number,
       location,
+      lat,
+      lng,
       tiktok_url,
       tags = []
     } = req.body;
@@ -31,16 +33,18 @@ export const createInfluencerProfile = async (req, res) => {
 
     const result = await db.query(
       `INSERT INTO influencer_profiles
-      (user_id, full_name, id_number, location, tiktok_url)
-      VALUES ($1, $2, $3, $4, $5)
+      (user_id, full_name, id_number, location, lat, lng, tiktok_url)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (user_id)
       DO UPDATE SET
         full_name  = EXCLUDED.full_name,
         id_number  = EXCLUDED.id_number,
         location   = EXCLUDED.location,
+        lat        = EXCLUDED.lat,
+        lng        = EXCLUDED.lng,
         tiktok_url = EXCLUDED.tiktok_url
       RETURNING *`,
-      [user_id, full_name, id_number, location, tiktok_url]
+      [user_id, full_name, id_number, location, lat || null, lng || null, tiktok_url]
     );
 
     const profile = result.rows[0];
@@ -188,8 +192,15 @@ export const createClientProfile = async (req, res) => {
       owner_name,
       business_type,
       location,
+      lat,          // ← nuevo
+      lng,          // ← nuevo
       awareness_level,
-      main_goal
+      main_goal,
+      phone,            // ← nuevo
+      monthly_budget,   // ← nuevo
+      instagram_url,    // ← nuevo
+      tiktok_url,       // ← nuevo
+      facebook_url,     // ← nuevo
     } = req.body;
 
     if (!user_id || !business_name || !owner_name) {
@@ -198,20 +209,32 @@ export const createClientProfile = async (req, res) => {
 
     const result = await db.query(
       `INSERT INTO client_profiles
-      (user_id, business_name, owner_name, business_type, location, awareness_level, main_goal)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      (user_id, business_name, owner_name, business_type, location, lat, lng,
+       awareness_level, main_goal, phone, monthly_budget,
+       instagram_url, tiktok_url, facebook_url)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
       ON CONFLICT (user_id)
       DO UPDATE SET
         business_name   = EXCLUDED.business_name,
         owner_name      = EXCLUDED.owner_name,
         business_type   = EXCLUDED.business_type,
         location        = EXCLUDED.location,
+        lat             = EXCLUDED.lat,
+        lng             = EXCLUDED.lng,
         awareness_level = EXCLUDED.awareness_level,
-        main_goal       = EXCLUDED.main_goal
+        main_goal       = EXCLUDED.main_goal,
+        phone           = EXCLUDED.phone,
+        monthly_budget  = EXCLUDED.monthly_budget,
+        instagram_url   = EXCLUDED.instagram_url,
+        tiktok_url      = EXCLUDED.tiktok_url,
+        facebook_url    = EXCLUDED.facebook_url
       RETURNING *`,
       [
-        user_id, business_name, owner_name,
-        business_type, location, awareness_level, main_goal
+        user_id, business_name, owner_name, business_type,
+        location, lat || null, lng || null,
+        awareness_level, main_goal,
+        phone || null, monthly_budget || null,
+        instagram_url || null, tiktok_url || null, facebook_url || null,
       ]
     );
 
@@ -262,6 +285,8 @@ const ALLOWED_FIELDS = [
   "full_name",
   "id_number",
   "location",
+  "lat",
+  "lng",
   "tiktok_url"
 ];
 
@@ -302,7 +327,7 @@ export const updateInfluencerProfile = async (req, res) => {
 
 
 /* =========================================================
-   GET CREATOR BY SERVICE_ID  ← NUEVO
+   GET CREATOR BY SERVICE_ID
    El marketplace navega a /creator/:id usando service_id
    de influencer_services. Este endpoint hace el JOIN con
    creator_profiles para devolver todos los datos del perfil.
@@ -344,7 +369,6 @@ export const getCreatorById = async (req, res) => {
 
     const row = result.rows[0];
 
-    // Construimos el objeto con la forma que espera el frontend
     const profile = {
       id:         row.service_id,
       user_id:    row.user_id,
@@ -362,22 +386,75 @@ export const getCreatorById = async (req, res) => {
         youtube:   row.youtube_url    || null,
       },
       stats: {
-        followers:   row.followers      ? Number(row.followers)      : null,
+        followers:   row.followers       ? Number(row.followers)       : null,
         engagement:  row.engagement_rate ? Number(row.engagement_rate) : null,
         avgLikes:    null,
         avgComments: null,
         reach:       null,
         platforms:   [],
       },
-      price:      row.price,
-      status:     row.status,
-      trending:   row.is_trending,
+      price:    row.price,
+      status:   row.status,
+      trending: row.is_trending,
     };
 
     return res.status(200).json({ profile });
 
   } catch (err) {
     console.error("GET CREATOR BY ID ERROR:", err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+
+/* =========================================================
+   GET INFLUENCERS FOR MAP
+   Devuelve solo los influencers que tienen lat/lng guardados.
+   Usado por el MapPanel del admin.
+========================================================= */
+export const getInfluencersForMap = async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT
+         ip.full_name,
+         ip.location,
+         ip.lat,
+         ip.lng,
+         ip.tiktok_url,
+         ip.category
+       FROM influencer_profiles ip
+       WHERE ip.lat IS NOT NULL
+         AND ip.lng IS NOT NULL
+       ORDER BY ip.profile_id DESC`
+    );
+
+    return res.status(200).json({ influencers: result.rows });
+
+  } catch (err) {
+    console.error("MAP INFLUENCERS ERROR:", err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+export const getClientsForMap = async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT
+         business_name,
+         owner_name,
+         business_type,
+         location,
+         lat,
+         lng
+       FROM client_profiles
+       WHERE lat IS NOT NULL
+         AND lng IS NOT NULL
+       ORDER BY client_id DESC`
+    );
+
+    return res.status(200).json({ clients: result.rows });
+
+  } catch (err) {
+    console.error("MAP CLIENTS ERROR:", err);
     return res.status(500).json({ error: err.message });
   }
 };
