@@ -232,7 +232,7 @@ export const verifyMFA = async (req, res) => {
       secret:   user.mfa_secret,
       encoding: "base32",
       token:    cleanToken,
-      window:   1,
+      window:   2,
     });
 
     if (!verified) {
