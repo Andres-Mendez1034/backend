@@ -31,13 +31,29 @@ export const getStats = async (req, res) => {
 export const getPayments = async (req, res) => {
   try {
     const { rows } = await db.query(`
-      SELECT 
-        p.id, p.amount, p.currency, p.status,
-        p.stripe_session_id, p.created_at,
-        u.email, u.name
-      FROM payments p
-      JOIN users u ON u.id = p.user_id
-      ORDER BY p.created_at DESC
+      SELECT
+        so.id,
+        so.amount,
+        so.currency,
+        so.status,
+        so.created_at,
+        so.notes,
+        u.email,
+        u.name,
+        CASE WHEN so.service_id IS NULL THEN 'offer' ELSE 'service' END AS order_type,
+        COALESCE(is2.influencer_name, so.notes, 'Colaboración negociada') AS description,
+        is2.category,
+        COALESCE(ip.full_name, ip2.full_name) AS influencer_name,
+        oo.duration_weeks
+      FROM service_orders so
+      JOIN users u ON u.id = so.user_id
+      LEFT JOIN influencer_services is2   ON is2.service_id  = so.service_id
+      LEFT JOIN influencer_profiles ip    ON ip.user_id      = is2.user_id
+      LEFT JOIN offer_orders oo           ON oo.order_id     = so.id
+      LEFT JOIN conversations conv        ON conv.id         = oo.conversation_id
+      LEFT JOIN creator_profiles cp       ON cp.id           = conv.creator_id
+      LEFT JOIN influencer_profiles ip2   ON ip2.user_id     = cp.user_id
+      ORDER BY so.created_at DESC
       LIMIT 200
     `);
     res.json(rows);
@@ -46,16 +62,15 @@ export const getPayments = async (req, res) => {
     res.status(500).json({ error: "Error fetching payments" });
   }
 };
-
 export const getPaymentsByDay = async (req, res) => {
   try {
     const { rows } = await db.query(`
-      SELECT 
+      SELECT
         created_at::date AS day,
-        COUNT(*) FILTER (WHERE status = 'completed') AS completed,
-        COUNT(*) FILTER (WHERE status = 'failed')    AS failed,
-        COALESCE(SUM(amount) FILTER (WHERE status = 'completed'), 0) AS total
-      FROM payments
+        COUNT(*) FILTER (WHERE status IN ('paid', 'pending')) AS completed,
+        COUNT(*) FILTER (WHERE status = 'failed')             AS failed,
+        COALESCE(SUM(amount) FILTER (WHERE status IN ('paid', 'pending')), 0) AS total
+      FROM service_orders
       GROUP BY day
       ORDER BY day DESC
       LIMIT 30
@@ -115,28 +130,47 @@ export const getTopPlans = async (req, res) => {
 export const getTopInfluencers = async (req, res) => {
   try {
     const { rows } = await db.query(`
-      SELECT 
-        u.id, u.name, u.email,
-        ip.category,
-        COUNT(so.id)  AS total_orders,
-        COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'completed'), 0) AS total_revenue
+      WITH influencer_orders AS (
+        SELECT ise.user_id, so.id AS order_id, so.amount
+        FROM influencer_services ise
+        JOIN service_orders so ON so.service_id = ise.service_id
+        WHERE so.status = 'paid'
+
+        UNION ALL
+
+        SELECT cp.user_id, so.id AS order_id, so.amount
+        FROM creator_profiles cp
+        JOIN conversations conv ON conv.creator_id = cp.id
+        JOIN offer_orders oo    ON oo.conversation_id = conv.id
+        JOIN service_orders so  ON so.id = oo.order_id
+        WHERE so.status = 'paid'
+      )
+      SELECT
+        u.id,
+        COALESCE(ip.full_name, u.email) AS name,
+        u.email,
+        STRING_AGG(DISTINCT t.tag_name, ', ') AS category,
+        COUNT(DISTINCT io.order_id) AS total_orders,
+        COALESCE(SUM(io.amount), 0) AS total_revenue
       FROM users u
-      LEFT JOIN influencer_profiles ip  ON ip.user_id  = u.id
-      LEFT JOIN influencer_services ise ON ise.user_id = u.id
-      LEFT JOIN service_orders so       ON so.service_id = ise.service_id
-      LEFT JOIN payments p              ON p.user_id = u.id
+      JOIN influencer_profiles ip ON ip.user_id = u.id
+      LEFT JOIN profile_tags pt   ON pt.profile_id = ip.profile_id
+      LEFT JOIN tags t            ON t.tag_id = pt.tag_id
+      LEFT JOIN influencer_orders io ON io.user_id = u.id
       WHERE u.role = 'influencer'
-      GROUP BY u.id, u.name, u.email, ip.category
-      ORDER BY total_orders DESC
+      GROUP BY u.id, u.email, ip.full_name
+      ORDER BY total_revenue DESC, total_orders DESC
       LIMIT 20
     `);
+console.log("TOP INFLUENCERS ROWS:", JSON.stringify(rows.slice(0,3), null, 2));
+
     res.json(rows);
   } catch (err) {
     console.error("ADMIN getTopInfluencers:", err);
     res.status(500).json({ error: "Error fetching top influencers" });
+    
   }
 };
-
 // ─────────────────────────────────────────
 // USUARIOS — con paginación y búsqueda
 // GET /admin/users?page=1&limit=50&search=texto

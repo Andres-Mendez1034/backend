@@ -4,6 +4,7 @@ import {
   createOfferCheckout,
   handleStripeWebhook,
   getPaymentStatus,
+  getMyOrders,
 } from "./payments.controller.js";
 import authMiddleware from "../middleware/auth.middleware.js";
 
@@ -20,5 +21,7 @@ router.post("/webhook", express.raw({ type: "application/json" }), handleStripeW
 
 // GET /api/payments/status/:paymentId
 router.get("/status/:paymentId", authMiddleware, getPaymentStatus);
+router.get("/my-orders", authMiddleware, getMyOrders);
+
 
 export default router;

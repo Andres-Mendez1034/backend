@@ -91,7 +91,12 @@ export const handleWebhook = async ({ rawBody, signature }) => {
     ========================================================= */
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
+
+      console.log("🔔 WEBHOOK RECIBIDO:", JSON.stringify(session.metadata, null, 2));
+
       const orderId = session.metadata?.orderId;
+
+      console.log("📦 orderId:", orderId);
 
       if (!orderId) {
         console.warn("⚠️  Webhook sin orderId en metadata, ignorando.");

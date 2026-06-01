@@ -81,6 +81,63 @@ export const createCheckoutSession = async (req, res, next) => {
     next(error);
   }
 };
+/**
+ * =====================================
+ * GET MY PAYMENT HISTORY
+ * =====================================
+ * GET /api/payments/my-orders
+ */
+export const getMyOrders = async (req, res, next) => {
+  try {
+    const user_id = req.user?.id;
+    if (!user_id) return res.status(401).json({ error: "Unauthorized" });
+
+    const result = await db.query(
+      `SELECT
+         so.id,
+         so.amount,
+         so.currency,
+         so.status,
+         so.notes,
+         so.created_at,
+         so.paid_at,
+         -- Servicio directo
+         is2.title          AS service_title,
+         -- Influencer (via servicio directo)
+         ip.full_name       AS influencer_name,
+         u_inf.email        AS influencer_email,
+         -- Tipo de pago
+         CASE
+           WHEN so.service_id IS NULL THEN 'offer'
+           ELSE 'service'
+         END AS order_type,
+         -- Duración (solo ofertas)
+         oo.duration_weeks
+       FROM service_orders so
+       LEFT JOIN influencer_services is2
+              ON is2.service_id = so.service_id
+       LEFT JOIN influencer_profiles ip
+              ON ip.user_id = is2.user_id
+       LEFT JOIN users u_inf
+              ON u_inf.id = ip.user_id
+       LEFT JOIN offer_orders oo
+              ON oo.order_id = so.id
+       LEFT JOIN conversations conv
+              ON conv.id = oo.conversation_id
+       LEFT JOIN creator_profiles cp
+              ON cp.id = conv.creator_id
+       LEFT JOIN influencer_profiles ip2
+              ON ip2.user_id = cp.user_id
+       WHERE so.user_id = $1
+       ORDER BY so.created_at DESC`,
+      [user_id]
+    );
+
+    return res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+};
 
 /**
  * =====================================
