@@ -21,6 +21,7 @@ import fulfillmentRoutes  from "./routes/fulfillment.routes.js";
 import paymentsRoutes     from "./payments/payments.routes.js";
 import subscriptionsRoutes from "./subscriptions/subscriptions.routes.js";
 import chatRoutes         from "./routes/chat.routes.js";
+import devRoutes from "./routes/dev.routes.js";
 
 // ==========================
 // MIDDLEWARES
@@ -112,6 +113,11 @@ app.use("/api/instagram",     instagramRoutes);
 app.use("/api/subscriptions", subscriptionsRoutes);
 app.use("/api/admin",         adminRoutes);
 app.use("/api/chat",          chatRoutes);
+
+// Dev-only routes (no se montan en producción)
+if (process.env.NODE_ENV !== "production") {
+  app.use("/api/dev", devRoutes);
+}
 
 // =========================================================
 // 404 HANDLER
