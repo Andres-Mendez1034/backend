@@ -1,14 +1,17 @@
 /* =========================================================
-   EMAIL TEMPLATES
+   EMAIL TEMPLATES — BrandConnect
 ========================================================= */
 
 /* =========================================================
    PAYMENT CONFIRMATION TEMPLATE
+   Soporta dos modos:
+     · Colaboración negociada (planLabel NO empieza con "Plan")
+     · Plan de suscripción      (planLabel empieza  con "Plan")
 ========================================================= */
 export const paymentConfirmationTemplate = ({
   userName,
-  planLabel,
-  planPrice,
+  planLabel,   // ej: "Colaboración negociada · 2 semanas" | "Plan Pro"
+  planPrice,   // ej: "COP 1.500.000" | "USD 49"
   orderId,
   paidAt,
 }) => {
@@ -17,6 +20,14 @@ export const paymentConfirmationTemplate = ({
     month: "long",
     day:   "numeric",
   });
+
+  // Detectar si es oferta negociada o plan de suscripción
+  const isOffer    = !planLabel.toLowerCase().startsWith("plan");
+  const badgeTitle = isOffer ? "Colaboración adquirida" : "Plan activado";
+  const subject    = isOffer ? planLabel : `Plan ${planLabel}`;
+  const bodyText   = isOffer
+    ? "Tu pago fue procesado exitosamente. La colaboración ha sido confirmada y el creador ha sido notificado para iniciar el trabajo."
+    : "Tu pago fue procesado exitosamente. A continuación encontrarás el resumen de tu compra y la factura adjunta.";
 
   return `
 <!DOCTYPE html>
@@ -31,39 +42,55 @@ export const paymentConfirmationTemplate = ({
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0;">
     <tr>
       <td align="center">
-        <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+        <table width="560" cellpadding="0" cellspacing="0"
+          style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
 
           <!-- HEADER -->
           <tr>
             <td style="background:#0a0a0f;padding:32px 40px;text-align:center;">
               <p style="margin:0;font-size:22px;font-weight:800;color:#63ffb4;letter-spacing:-0.5px;">BrandConnect</p>
-              <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.4);letter-spacing:0.08em;text-transform:uppercase;">Confirmación de pago</p>
+              <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.4);letter-spacing:0.08em;text-transform:uppercase;">
+                Confirmación de pago
+              </p>
             </td>
           </tr>
 
           <!-- BODY -->
           <tr>
             <td style="padding:40px;">
-              <p style="margin:0 0 8px;font-size:15px;color:#6b7280;">Hola, <strong style="color:#111827;">${userName}</strong></p>
+
+              <!-- Saludo -->
+              <p style="margin:0 0 8px;font-size:15px;color:#6b7280;">
+                Hola, <strong style="color:#111827;">${userName}</strong>
+              </p>
               <p style="margin:0 0 32px;font-size:15px;color:#6b7280;line-height:1.6;">
-                Tu pago fue procesado exitosamente. A continuación encontrarás el resumen de tu compra y la factura adjunta.
+                ${bodyText}
               </p>
 
-              <!-- PLAN BADGE -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;margin-bottom:32px;">
+              <!-- BADGE: tipo de servicio + precio -->
+              <table width="100%" cellpadding="0" cellspacing="0"
+                style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;margin-bottom:32px;">
                 <tr>
                   <td style="padding:24px 28px;">
-                    <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.1em;">Plan activado</p>
-                    <p style="margin:0;font-size:28px;font-weight:800;color:#111827;">Plan ${planLabel}</p>
+                    <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.1em;">
+                      ${badgeTitle}
+                    </p>
+                    <p style="margin:0;font-size:20px;font-weight:800;color:#111827;line-height:1.3;">
+                      ${subject}
+                    </p>
                   </td>
-                  <td style="padding:24px 28px;text-align:right;">
-                    <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.1em;">Total pagado</p>
-                    <p style="margin:0;font-size:28px;font-weight:800;color:#111827;">${planPrice}</p>
+                  <td style="padding:24px 28px;text-align:right;vertical-align:middle;white-space:nowrap;">
+                    <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.1em;">
+                      Total pagado
+                    </p>
+                    <p style="margin:0;font-size:24px;font-weight:800;color:#111827;">
+                      ${planPrice}
+                    </p>
                   </td>
                 </tr>
               </table>
 
-              <!-- DETALLES -->
+              <!-- DETALLES DE LA ORDEN -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
                 <tr>
                   <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
@@ -86,24 +113,32 @@ export const paymentConfirmationTemplate = ({
                     <span style="font-size:14px;color:#6b7280;">Estado</span>
                   </td>
                   <td style="padding:10px 0;text-align:right;">
-                    <span style="display:inline-block;background:#dcfce7;color:#15803d;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;">Pagado</span>
+                    <span style="display:inline-block;background:#dcfce7;color:#15803d;font-size:12px;font-weight:600;padding:3px 12px;border-radius:20px;">
+                      ✓ Pagado
+                    </span>
                   </td>
                 </tr>
               </table>
 
+              <!-- NOTA FINAL -->
               <p style="margin:0 0 6px;font-size:13px;color:#9ca3af;text-align:center;">
                 La factura en PDF está adjunta a este correo.
               </p>
               <p style="margin:0;font-size:13px;color:#9ca3af;text-align:center;">
-                Si tienes alguna duda escríbenos a <a href="mailto:${process.env.SMTP_USER}" style="color:#6366f1;text-decoration:none;">${process.env.SMTP_USER}</a>
+                ¿Tienes dudas? Escríbenos a
+                <a href="mailto:soporte@brandconnect.co"
+                  style="color:#6366f1;text-decoration:none;">soporte@brandconnect.co</a>
               </p>
+
             </td>
           </tr>
 
           <!-- FOOTER -->
           <tr>
             <td style="background:#f9fafb;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb;">
-              <p style="margin:0;font-size:12px;color:#9ca3af;">© ${new Date().getFullYear()} BrandConnect · Todos los derechos reservados</p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;">
+                © ${new Date().getFullYear()} BrandConnect · Todos los derechos reservados
+              </p>
             </td>
           </tr>
 

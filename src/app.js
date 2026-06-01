@@ -3,41 +3,25 @@ import cors from "cors";
 import fs from "fs";
 import yaml from "yaml";
 import instagramRoutes from "./routes/instagram.routes.js";
-
-// ==========================
-// SWAGGER
-// ==========================
 import swaggerUi from "swagger-ui-express";
-
-// ==========================
-// ROUTES
-// ==========================
-import authRoutes         from "./routes/auth.routes.js";
-import userRoutes         from "./routes/user.routes.js";
-import profileRoutes      from "./routes/profiles.routes.js";
-import marketplaceRoutes  from "./routes/marketplace.routes.js";
-import chatbotRoutes      from "./routes/chatbot.routes.js";
-import fulfillmentRoutes  from "./routes/fulfillment.routes.js";
-import paymentsRoutes     from "./payments/payments.routes.js";
+import authRoutes from "./routes/auth.routes.js";
+import userRoutes from "./routes/user.routes.js";
+import profileRoutes from "./routes/profiles.routes.js";
+import marketplaceRoutes from "./routes/marketplace.routes.js";
+import chatbotRoutes from "./routes/chatbot.routes.js";
+import fulfillmentRoutes from "./routes/fulfillment.routes.js";
+import paymentsRoutes from "./payments/payments.routes.js";
 import subscriptionsRoutes from "./subscriptions/subscriptions.routes.js";
-import chatRoutes         from "./routes/chat.routes.js";
+import chatRoutes from "./routes/chat.routes.js";
 import devRoutes from "./routes/dev.routes.js";
-
-// ==========================
-// MIDDLEWARES
-// ==========================
-import { errorMiddleware } from "./middleware/error.middleware.js";
 import adminRoutes from "./routes/admin.routes.js";
-
-// ==========================
-// DB
-// ==========================
+import { errorMiddleware } from "./middleware/error.middleware.js";
 import db from "./config/db.js";
 
 const app = express();
 
 // =========================================================
-// CORS CONFIG
+// CORS
 // =========================================================
 app.use(
   cors({
@@ -47,35 +31,31 @@ app.use(
 );
 
 // =========================================================
-// STRIPE WEBHOOKS (RAW BODY - OBLIGATORIO, ANTES DE express.json)
+// BODY PARSER — webhooks necesitan raw body, el resto JSON
 // =========================================================
-app.use(
+const WEBHOOK_PATHS = [
   "/api/payments/webhook",
-  express.raw({ type: "application/json" })
-);
-
-app.use(
   "/api/subscriptions/webhook",
-  express.raw({ type: "application/json" })
-);
+];
+
+app.use((req, res, next) => {
+  if (WEBHOOK_PATHS.includes(req.originalUrl)) {
+    express.raw({ type: "application/json" })(req, res, next);
+  } else {
+    express.json()(req, res, next);
+  }
+});
 
 // =========================================================
-// JSON PARSER
-// =========================================================
-app.use(express.json());
-
-// =========================================================
-// SWAGGER (SAFE LOAD)
+// SWAGGER
 // =========================================================
 let swaggerDocument;
-
 try {
   const swaggerFile = fs.readFileSync("./src/docs/swagger.yaml", "utf8");
   swaggerDocument = yaml.parse(swaggerFile);
 } catch (err) {
   console.error("Swagger load error:", err.message);
 }
-
 if (swaggerDocument) {
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 }
@@ -100,12 +80,11 @@ app.get("/test-db", async (req, res) => {
 });
 
 // =========================================================
-// API ROUTES
+// ROUTES
 // =========================================================
 app.use("/api/auth",          authRoutes);
 app.use("/api/users",         userRoutes);
 app.use("/api/profiles",      profileRoutes);
-// Backwards-compatible mount (some tests and clients use /profiles without /api)
 app.use("/profiles",          profileRoutes);
 app.use("/api/marketplace",   marketplaceRoutes);
 app.use("/api/payments",      paymentsRoutes);
@@ -116,20 +95,22 @@ app.use("/api/subscriptions", subscriptionsRoutes);
 app.use("/api/admin",         adminRoutes);
 app.use("/api/chat",          chatRoutes);
 
-// Dev-only routes (no se montan en producción)
+// =========================================================
+// DEV ROUTES
+// =========================================================
 if (process.env.NODE_ENV !== "production") {
   app.use("/api/dev", devRoutes);
 }
 
 // =========================================================
-// 404 HANDLER
+// 404
 // =========================================================
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
 // =========================================================
-// GLOBAL ERROR HANDLER
+// ERROR HANDLER
 // =========================================================
 app.use(errorMiddleware);
 
