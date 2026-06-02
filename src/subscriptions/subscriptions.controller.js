@@ -110,7 +110,7 @@ export const createSubscriptionCheckout = async (req, res, next) => {
 export const handleSubscriptionWebhook = async (req, res) => {
   try {
     const sig            = req.headers["stripe-signature"];
-    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+const endpointSecret = process.env.STRIPE_SUBSCRIPTIONS_WEBHOOK_SECRET;
 
     let event;
     try {

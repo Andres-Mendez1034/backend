@@ -3,7 +3,7 @@ import db from "../config/db.js";
 import { sendPaymentConfirmationEmail } from "../email/email.service.js";
 
 /* =========================================================
-   CREATE CHECKOUT SESSION
+  CREATE CHECKOUT SESSION
 ========================================================= */
 export const createCheckoutSession = async ({
   userId,
@@ -68,7 +68,7 @@ export const createCheckoutSession = async ({
 };
 
 /* =========================================================
-   HANDLE STRIPE WEBHOOK
+  HANDLE STRIPE WEBHOOK
 ========================================================= */
 export const handleWebhook = async ({ rawBody, signature }) => {
   try {
@@ -87,16 +87,11 @@ export const handleWebhook = async ({ rawBody, signature }) => {
     }
 
     /* =========================================================
-       PAGO EXITOSO
+      PAGO EXITOSO
     ========================================================= */
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-
-      console.log("🔔 WEBHOOK RECIBIDO:", JSON.stringify(session.metadata, null, 2));
-
       const orderId = session.metadata?.orderId;
-
-      console.log("📦 orderId:", orderId);
 
       if (!orderId) {
         console.warn("⚠️  Webhook sin orderId en metadata, ignorando.");
@@ -105,9 +100,9 @@ export const handleWebhook = async ({ rawBody, signature }) => {
 
       const existingOrder = await db.query(
         `SELECT so.*, u.email AS user_email, u.name AS user_name
-         FROM service_orders so
-         JOIN users u ON u.id = so.user_id
-         WHERE so.id = $1`,
+        FROM service_orders so
+        JOIN users u ON u.id = so.user_id
+        WHERE so.id = $1`,
         [orderId]
       );
 
@@ -124,10 +119,10 @@ export const handleWebhook = async ({ rawBody, signature }) => {
 
       await db.query(
         `UPDATE service_orders
-         SET status                   = 'paid',
-             stripe_payment_intent_id = $1,
-             paid_at                  = NOW()
-         WHERE id = $2`,
+        SET status                   = 'paid',
+            stripe_payment_intent_id = $1,
+            paid_at                  = NOW()
+        WHERE id = $2`,
         [session.payment_intent, orderId]
       );
 
@@ -188,14 +183,14 @@ export const handleWebhook = async ({ rawBody, signature }) => {
     }
 
     /* =========================================================
-       PAGO FALLIDO
+      PAGO FALLIDO
     ========================================================= */
     if (event.type === "payment_intent.payment_failed") {
       const intent = event.data.object;
 
       await db.query(
         `UPDATE service_orders SET status = 'failed'
-         WHERE stripe_payment_intent_id = $1`,
+        WHERE stripe_payment_intent_id = $1`,
         [intent.id]
       );
 
@@ -210,7 +205,7 @@ export const handleWebhook = async ({ rawBody, signature }) => {
 };
 
 /* =========================================================
-   GET PAYMENT STATUS
+  GET PAYMENT STATUS
 ========================================================= */
 export const getPaymentStatus = async (orderId) => {
   try {
