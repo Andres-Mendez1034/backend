@@ -34,7 +34,7 @@ app.use(
 // BODY PARSER — webhooks necesitan raw body, el resto JSON
 // =========================================================
 const WEBHOOK_PATHS = [
-  "/api/payments/webhook",
+  //"/api/payments/webhook",
   "/api/subscriptions/webhook",
 ];
 
