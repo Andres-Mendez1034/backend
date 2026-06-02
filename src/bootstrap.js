@@ -1,25 +1,20 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-// 🔥 IMPORT DINÁMICO (ok mantenerlo)
-const { default: app } = await import("./app.js");
+import app from "./app.js";
 
 const PORT = process.env.PORT || 3000;
 
-/* =========================================================
-   GLOBAL ERROR HANDLERS (EVITA SILENCIO DE ERRORES)
-========================================================= */
 process.on("uncaughtException", (err) => {
   console.error("🔥 UNCAUGHT EXCEPTION:", err);
+  process.exit(1);
 });
 
 process.on("unhandledRejection", (err) => {
   console.error("🔥 UNHANDLED REJECTION:", err);
+  process.exit(1);
 });
 
-/* =========================================================
-   ENV CHECK
-========================================================= */
 console.log("ENV CHECK:", {
   db_host: process.env.DB_HOST,
   db_user: process.env.DB_USER,
@@ -27,13 +22,11 @@ console.log("ENV CHECK:", {
   db_password: process.env.DB_PASSWORD ? "OK" : "MISSING"
 });
 
-/* =========================================================
-   START SERVER (SAFE LOGGING)
-========================================================= */
 try {
   app.listen(PORT, () => {
     console.log(`🚀 Server activo en puerto ${PORT}`);
   });
 } catch (err) {
   console.error("🔥 SERVER START ERROR:", err);
+  process.exit(1);
 }
