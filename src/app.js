@@ -25,7 +25,7 @@ const app = express();
 // =========================================================
 app.use(
   cors({
-    origin: "*",
+    origin: process.env.FRONTEND_URL,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   })
 );
@@ -53,6 +53,10 @@ let swaggerDocument;
 try {
   const swaggerFile = fs.readFileSync("./src/docs/swagger.yaml", "utf8");
   swaggerDocument = yaml.parse(swaggerFile);
+  const swaggerServerUrl = process.env.API_URL || process.env.SWAGGER_SERVER_URL;
+  if (swaggerDocument && swaggerServerUrl) {
+    swaggerDocument.servers = [{ url: swaggerServerUrl }];
+  }
 } catch (err) {
   console.error("Swagger load error:", err.message);
 }

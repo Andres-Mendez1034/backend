@@ -5,8 +5,7 @@ info:
   version: 1.0.0
   description: Backend API for influencer marketplace platform (Brand Connect)
 
-servers:
-  - url: http://localhost:3000
+servers: []
 
 # =========================================================
 # TAGS
