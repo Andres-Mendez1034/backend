@@ -28,6 +28,12 @@ tags:
   - name: Stripe Payments
     description: Stripe checkout and payment processing
 
+  - name: Chat
+    description: Messaging and conversations
+
+  - name: Admin
+    description: Administrative endpoints (dashboard, reports)
+
   - name: Fulfillment
     description: Service delivery workflow
 
@@ -41,6 +47,423 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          description: Payload varies by endpoint
+          additionalProperties: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: ValidationError
+        message:
+          type: string
+          example: "Missing required field: email"
+        code:
+          type: string
+          example: ERR_MISSING_FIELD
+
+    ValidationError:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    PaginatedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        total:
+          type: integer
+          example: 123
+        page:
+          type: integer
+          example: 1
+        per_page:
+          type: integer
+          example: 20
+
+    # -----------------------------
+    # Domain-specific schemas
+    # -----------------------------
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          example: user@example.com
+        name:
+          type: string
+          example: Juan Perez
+        role:
+          type: string
+          example: client
+        email_verified:
+          type: boolean
+          example: false
+        mfa_enabled:
+          type: boolean
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-12-01T12:34:56Z"
+
+    RegisterResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Account created. Please check your email to verify your account."
+
+    LoginResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Login successful"
+        token:
+          type: string
+          nullable: true
+        user:
+          $ref: '#/components/schemas/User'
+        mfaRequired:
+          type: boolean
+          example: false
+
+    VerifyMFAResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    VerifyEmailResponse:
+      type: object
+      properties:
+        verified:
+          type: boolean
+          example: true
+        email:
+          type: string
+        name:
+          type: string
+        otpauth_url:
+          type: string
+
+    MFAQRResponse:
+      type: object
+      properties:
+        otpauth_url:
+          type: string
+
+    CreatorProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        name:
+          type: string
+        age:
+          type: integer
+          nullable: true
+        gender:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        avatar:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        willing:
+          type: array
+          items:
+            type: string
+        socials:
+          type: object
+          properties:
+            instagram:
+              type: string
+              nullable: true
+            tiktok:
+              type: string
+              nullable: true
+            youtube:
+              type: string
+              nullable: true
+        stats:
+          type: object
+          properties:
+            followers:
+              type: integer
+              nullable: true
+            engagement:
+              type: number
+              nullable: true
+        price:
+          type: number
+          nullable: true
+        status:
+          type: string
+        trending:
+          type: boolean
+
+    MarketplaceService:
+      type: object
+      properties:
+        service_id:
+          type: integer
+        user_id:
+          type: integer
+        title:
+          type: string
+        tag:
+          type: string
+        price:
+          type: number
+        status:
+          type: string
+        trending:
+          type: boolean
+        location:
+          type: string
+          nullable: true
+        image:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+
+    ServiceCreateRequest:
+      type: object
+      required:
+        - user_id
+        - influencer_name
+      properties:
+        user_id:
+          type: integer
+          example: 5
+        influencer_name:
+          type: string
+          example: "Gaming TikTok Promotion"
+        category:
+          type: string
+          example: gaming
+        price:
+          type: number
+          example: 50
+
+    CheckoutSessionResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        url:
+          type: string
+        sessionId:
+          type: string
+        orderId:
+          type: integer
+
+    OfferCheckoutRequest:
+      type: object
+      properties:
+        conversation_id:
+          type: integer
+        amount_cop:
+          type: number
+        description:
+          type: string
+        duration_weeks:
+          type: integer
+        offer_message_id:
+          type: integer
+
+    PaymentOrder:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        service_id:
+          type: integer
+          nullable: true
+        amount:
+          type: number
+        currency:
+          type: string
+        status:
+          type: string
+        stripe_session_id:
+          type: string
+          nullable: true
+        stripe_payment_intent_id:
+          type: string
+          nullable: true
+        paid_at:
+          type: string
+          format: date-time
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        client_id:
+          type: integer
+        creator_id:
+          type: integer
+        updated_at:
+          type: string
+          format: date-time
+        other_name:
+          type: string
+          nullable: true
+        other_avatar:
+          type: string
+          nullable: true
+        other_id:
+          type: integer
+          nullable: true
+        last_message:
+          type: string
+          nullable: true
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+        unread_count:
+          type: integer
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversation_id:
+          type: integer
+        sender_id:
+          type: integer
+        text:
+          type: string
+        is_offer:
+          type: boolean
+        offer_amount:
+          type: number
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+
+  responses:
+    Success:
+      description: Successful response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SuccessResponse'
+
+    Created:
+      description: Resource created
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SuccessResponse'
+
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            validation:
+              summary: Validation error example
+              value:
+                error: ValidationError
+                message: "Missing required field: email"
+
+    Unauthorized:
+      description: Authentication required or failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Conflict:
+      description: Conflict (resource already exists)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
 
 security:
   - BearerAuth: []
@@ -93,16 +516,30 @@ paths:
                 role:
                   type: string
                   example: client
+            examples:
+              register:
+                summary: Example register payload
+                value:
+                  email: newuser@example.com
+                  password: strongpassword
+                  name: María López
+                  role: client
 
       responses:
         "201":
-          description: User created successfully
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+              example:
+                message: "Account created. Please check your email to verify your account."
 
         "409":
-          description: User already exists
+          $ref: '#/components/responses/Conflict'
 
         "400":
-          description: Validation error
+          $ref: '#/components/responses/BadRequest'
 
   /api/auth/login:
     post:
@@ -133,13 +570,48 @@ paths:
                 password:
                   type: string
                   example: 123456
+            examples:
+              login:
+                summary: Example login payload
+                value:
+                  email: user@example.com
+                  password: secret123
 
       responses:
         "200":
-          description: Login successful or MFA required
+          description: Login response (either JWT returned or MFA required)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              examples:
+                success:
+                  summary: Successful login (no MFA)
+                  value:
+                    message: "Login successful"
+                    token: "eyJhbGci..."
+                    user:
+                      id: 12
+                      email: user@example.com
+                      name: Ana
+                      role: client
+                      email_verified: true
+                      mfa_enabled: false
+                    mfaRequired: false
+                mfa_required:
+                  summary: MFA required
+                  value:
+                    message: "MFA required"
+                    user:
+                      id: 12
+                      email: user@example.com
+                    mfaRequired: true
 
         "400":
-          description: Missing fields
+          $ref: '#/components/responses/BadRequest'
+
+        "401":
+          $ref: '#/components/responses/Unauthorized'
 
   /api/auth/verify-mfa:
     post:
@@ -170,13 +642,30 @@ paths:
                 token:
                   type: string
                   example: "123456"
-
+            examples:
+              mfa:
+                summary: Verify MFA example
+                value:
+                  email: user@example.com
+                  token: "123456"
       responses:
         "200":
-          description: MFA verified successfully
+          description: MFA verified and JWT returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyMFAResponse'
+              example:
+                success: true
+                token: "eyJhbGci..."
+                user:
+                  id: 12
+                  email: user@example.com
+                  name: Ana
+                  role: client
 
         "400":
-          description: Invalid MFA code
+          $ref: '#/components/responses/BadRequest'
 
   /api/auth/mfa/qr:
     post:
@@ -202,19 +691,30 @@ paths:
                 email:
                   type: string
                   example: test@email.com
+            examples:
+              qr:
+                summary: Example MFA QR request
+                value:
+                  email: user@example.com
 
       responses:
         "200":
-          description: QR generated successfully
+          description: Returns otpauth_url for MFA setup
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MFAQRResponse'
+              example:
+                otpauth_url: "otpauth://totp/BrandConnect:user@example.com?secret=ABC123&issuer=BrandConnect"
 
         "400":
-          description: MFA not configured
+          $ref: '#/components/responses/BadRequest'
 
   # =========================================================
   # USERS
   # =========================================================
 
-  /users:
+  /api/users:
     get:
       tags:
         - Users
@@ -224,8 +724,30 @@ paths:
       responses:
         "200":
           description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+              example:
+                - id: 1
+                  email: admin@example.com
+                  name: Admin
+                  role: admin
+                  email_verified: true
+                  mfa_enabled: false
+                - id: 2
+                  email: user@example.com
+                  name: Ana
+                  role: client
+                  email_verified: true
+                  mfa_enabled: true
 
-  /users/{id}:
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/users/{id}:
     get:
       tags:
         - Users
@@ -242,10 +764,24 @@ paths:
 
       responses:
         "200":
-          description: User found
+          description: User object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              example:
+                id: 2
+                email: user@example.com
+                name: Ana
+                role: client
+                email_verified: true
+                mfa_enabled: true
 
         "404":
-          description: User not found
+          $ref: '#/components/responses/NotFound'
+
+        "500":
+          $ref: '#/components/responses/InternalServerError'
 
     put:
       tags:
@@ -302,7 +838,7 @@ paths:
   # PROFILES
   # =========================================================
 
-  /profiles/influencer:
+  /api/profiles/influencer:
     post:
       tags:
         - Profiles
@@ -336,9 +872,12 @@ paths:
 
       responses:
         "201":
-          description: Influencer profile created
+          $ref: '#/components/responses/Created'
 
-  /profiles/client:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+
+  /api/profiles/client:
     post:
       tags:
         - Profiles
@@ -367,9 +906,12 @@ paths:
 
       responses:
         "201":
-          description: Client profile created
+          $ref: '#/components/responses/Created'
 
-  /profiles/user/{user_id}:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+
+  /api/profiles/user/{user_id}:
     get:
       tags:
         - Profiles
@@ -388,7 +930,7 @@ paths:
         "200":
           description: Profile found
 
-  /profiles/influencer/{user_id}:
+  /api/profiles/influencer/{user_id}:
     put:
       tags:
         - Profiles
@@ -426,7 +968,7 @@ paths:
   # MARKETPLACE
   # =========================================================
 
-  /marketplace/service:
+  /api/marketplace/service:
     post:
       tags:
         - Marketplace
@@ -461,12 +1003,43 @@ paths:
                 price:
                   type: number
                   example: 50
+            examples:
+              create_service:
+                summary: Example create service payload
+                value:
+                  user_id: 12
+                  influencer_name: "María López"
+                  category: travel
+                  price: 100
+                  status: available
 
       responses:
         "201":
-          description: Service created successfully
+          description: Service created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  service:
+                    $ref: '#/components/schemas/MarketplaceService'
+              example:
+                message: "Service created"
+                service:
+                  service_id: 101
+                  user_id: 12
+                  title: "María López"
+                  tag: travel
+                  price: 100
+                  status: available
+                  trending: false
 
-  /marketplace/services:
+        "400":
+          $ref: '#/components/responses/BadRequest'
+
+  /api/marketplace/services:
     get:
       tags:
         - Marketplace
@@ -476,8 +1049,29 @@ paths:
       responses:
         "200":
           description: List of marketplace services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MarketplaceService'
+              example:
+                - service_id: 101
+                  user_id: 12
+                  title: "María López"
+                  tag: travel
+                  price: 100
+                  status: available
+                  trending: false
+                - service_id: 102
+                  user_id: 15
+                  title: "GamerX"
+                  tag: gaming
+                  price: 50
+                  status: available
+                  trending: true
 
-  /marketplace/services/user/{user_id}:
+  /api/marketplace/services/user/{user_id}:
     get:
       tags:
         - Marketplace
@@ -495,8 +1089,21 @@ paths:
       responses:
         "200":
           description: User services found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MarketplaceService'
+              example:
+                - service_id: 101
+                  user_id: 12
+                  title: "María López"
+                  tag: travel
+                  price: 100
+                  status: available
 
-  /marketplace/service/status:
+  /api/marketplace/service/status:
     put:
       tags:
         - Marketplace
@@ -538,12 +1145,40 @@ paths:
   # STRIPE PAYMENTS
   # =========================================================
 
-  /payments/checkout/{service_id}:
+
+
+  /api/payments/status/{paymentId}:
+    get:
+      tags:
+        - Stripe Payments
+
+      summary: Get payment status by paymentId
+
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+
+          schema:
+            type: string
+            example: "1"
+
+      responses:
+        "200":
+          $ref: '#/components/responses/Success'
+
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/payments/create-checkout/{service_id}:
     post:
       tags:
         - Stripe Payments
 
-      summary: Create Stripe checkout session
+      summary: Create Stripe checkout session (new route)
 
       parameters:
         - name: service_id
@@ -556,42 +1191,82 @@ paths:
 
       responses:
         "200":
-          description: Stripe checkout session created
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSessionResponse'
+              example:
+                message: "Checkout session created successfully"
+                url: "https://checkout.stripe.com/pay/cs_test_123"
+                sessionId: "cs_test_123"
+                orderId: 456
 
         "400":
-          description: Service unavailable
+          $ref: '#/components/responses/BadRequest'
 
         "404":
-          description: Service not found
+          $ref: '#/components/responses/NotFound'
 
-  /payments/status/{order_id}:
-    get:
+  /api/payments/checkout-offer:
+    post:
       tags:
         - Stripe Payments
 
-      summary: Get payment status by order
+      summary: Create checkout for negotiated offer (chat)
 
-      parameters:
-        - name: order_id
-          in: path
-          required: true
-
-          schema:
-            type: string
-            example: "1"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+            examples:
+              offer:
+                summary: Example offer checkout payload
+                value:
+                  conversation_id: 55
+                  amount_cop: 250000
+                  description: "Promoción en TikTok de 30s"
+                  duration_weeks: 2
+                  offer_message_id: 987
 
       responses:
         "200":
-          description: Payment status retrieved
+          description: Checkout created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSessionResponse'
+              example:
+                message: "Checkout de oferta creado"
+                url: "https://checkout.stripe.com/pay/cs_test_offer"
+                sessionId: "cs_test_offer"
+                orderId: 789
 
-        "404":
-          description: Order not found
+  /api/payments/webhook:
+    post:
+      tags:
+        - Stripe Payments
+
+      summary: Stripe webhook endpoint
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+
+      responses:
+        "200":
+          description: Webhook processed
 
   # =========================================================
   # FULFILLMENT
   # =========================================================
 
-  /fulfillment/{order_id}:
+  /api/fulfillment/{order_id}:
     get:
       tags:
         - Fulfillment
@@ -613,7 +1288,7 @@ paths:
         "404":
           description: Fulfillment not found
 
-  /fulfillment/accept:
+  /api/fulfillment/accept:
     post:
       tags:
         - Fulfillment
@@ -640,7 +1315,7 @@ paths:
         "200":
           description: Order accepted
 
-  /fulfillment/deliver:
+  /api/fulfillment/deliver:
     post:
       tags:
         - Fulfillment
@@ -678,7 +1353,7 @@ paths:
         "200":
           description: Service delivered
 
-  /fulfillment/complete:
+  /api/fulfillment/complete:
     post:
       tags:
         - Fulfillment
@@ -704,3 +1379,476 @@ paths:
       responses:
         "200":
           description: Order completed
+
+  # =========================================================
+  # AUTH - VERIFY EMAIL
+  # =========================================================
+
+  /api/auth/verify-email:
+    get:
+      tags:
+        - Auth
+
+      summary: Verify email with token from query
+
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+
+      responses:
+        "200":
+          description: Email verified and MFA setup info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyEmailResponse'
+              example:
+                verified: true
+                email: user@example.com
+                name: Ana
+                otpauth_url: "otpauth://totp/BrandConnect:user@example.com?secret=ABC123&issuer=BrandConnect"
+
+        "400":
+          $ref: '#/components/responses/BadRequest'
+
+  # =========================================================
+  # CHAT
+  # =========================================================
+
+  /api/chat/conversations:
+    get:
+      tags:
+        - Chat
+
+      summary: Get user conversations
+
+      responses:
+        "200":
+          $ref: '#/components/responses/Success'
+
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Chat
+
+      summary: Create or update conversation
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                creator_id:
+                  type: string
+
+      responses:
+        "200":
+          $ref: '#/components/responses/Success'
+
+        "400":
+          $ref: '#/components/responses/BadRequest'
+
+  /api/chat/conversations/{id}/messages:
+    get:
+      tags:
+        - Chat
+
+      summary: Get messages for a conversation
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+
+      responses:
+        "200":
+          $ref: '#/components/responses/Success'
+
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Chat
+
+      summary: Send message in a conversation
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                is_offer:
+                  type: boolean
+                offer_amount:
+                  type: number
+
+      responses:
+        "200":
+          $ref: '#/components/responses/Success'
+
+        "400":
+          $ref: '#/components/responses/BadRequest'
+
+  /api/chat/unread-count:
+    get:
+      tags:
+        - Chat
+
+      summary: Get unread messages count
+
+      responses:
+        "200":
+          description: Unread count
+
+  # =========================================================
+  # CHATBOT
+  # =========================================================
+
+  /api/chatbot/message:
+    post:
+      tags:
+        - Marketplace
+
+      summary: Send message to chatbot
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+
+      responses:
+        "200":
+          description: Chatbot response
+
+  /api/chatbot/history/{userId}:
+    get:
+      tags:
+        - Marketplace
+
+      summary: Get chatbot history for user
+
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+
+      responses:
+        "200":
+          description: Chat history
+
+
+
+  # =========================================================
+  # ADMIN
+  # =========================================================
+
+  /api/admin/stats:
+    get:
+      tags:
+        - Admin
+
+      summary: Get admin dashboard stats
+
+      responses:
+        "200":
+          description: Stats object
+
+  /api/admin/payments:
+    get:
+      tags:
+        - Admin
+
+      summary: Get payments list
+
+      responses:
+        "200":
+          description: Payments list
+
+  /api/admin/payments/by-day:
+    get:
+      tags:
+        - Admin
+
+      summary: Payments grouped by day
+
+      responses:
+        "200":
+          description: Grouped payments
+
+  /api/admin/payments/by-month:
+    get:
+      tags:
+        - Admin
+
+      summary: Payments grouped by month
+
+      responses:
+        "200":
+          description: Grouped payments
+
+  /api/admin/plans/top:
+    get:
+      tags:
+        - Admin
+
+      summary: Top plans
+
+      responses:
+        "200":
+          description: Top plans list
+
+  /api/admin/influencers/top:
+    get:
+      tags:
+        - Admin
+
+      summary: Top influencers
+
+      responses:
+        "200":
+          description: Top influencers list
+
+  /api/admin/users:
+    get:
+      tags:
+        - Admin
+
+      summary: Get users (admin)
+
+      responses:
+        "200":
+          description: Users list
+
+  /api/admin/users/{id}/role:
+    patch:
+      tags:
+        - Admin
+
+      summary: Update user role
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+
+      responses:
+        "200":
+          description: Role updated
+
+  /api/admin/users/{id}/ban:
+    patch:
+      tags:
+        - Admin
+
+      summary: Ban or unban user
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                banned:
+                  type: boolean
+
+      responses:
+        "200":
+          description: User ban status updated
+
+  # =========================================================
+  # INSTAGRAM
+  # =========================================================
+
+  /api/instagram/login:
+    get:
+      tags:
+        - Marketplace
+
+      summary: Initiate Instagram OAuth login
+
+      responses:
+        "302":
+          description: Redirect to Instagram
+
+  /api/instagram/callback:
+    get:
+      tags:
+        - Marketplace
+
+      summary: Instagram OAuth callback
+
+      responses:
+        "200":
+          description: Callback processed
+
+  # =========================================================
+  # PROFILES - EXTRA
+  # =========================================================
+
+  /api/profiles/creator:
+    post:
+      tags:
+        - Profiles
+
+      summary: Create creator profile (with image)
+
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                profile_image:
+                  type: string
+                  format: binary
+            examples:
+              creator:
+                summary: Example creator multipart payload (fields only shown)
+                value:
+                  user_id: 12
+                  full_name: "María López"
+                  age: 28
+                  gender: female
+                  bio: "Creadora de contenido de viajes"
+                  main_category: travel
+                  tiktok_url: "https://tiktok.com/@maria"
+
+      responses:
+        "201":
+          description: Creator profile created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  profile:
+                    $ref: '#/components/schemas/CreatorProfile'
+              example:
+                message: "Creator profile saved"
+                profile:
+                  id: 34
+                  user_id: 12
+                  name: "María López"
+                  age: 28
+                  gender: female
+                  bio: "Creadora de contenido de viajes"
+                  avatar: null
+                  location: "Bogotá, Colombia"
+                  tags: [travel]
+                  willing: [collaboration]
+                  socials:
+                    instagram: "https://instagram.com/maria"
+                    tiktok: "https://tiktok.com/@maria"
+                    youtube: null
+                  stats:
+                    followers: 12000
+                    engagement: 3.5
+                  price: 0
+                  status: available
+                  trending: false
+
+  /api/profiles/creator/{id}:
+    get:
+      tags:
+        - Profiles
+
+      summary: Get creator by id
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+
+      responses:
+        "200":
+          description: Creator profile
+
+  /api/profiles/influencers/map:
+    get:
+      tags:
+        - Profiles
+
+      summary: Get influencers for map
+
+      responses:
+        "200":
+          description: List of influencers with location
+
+  /api/profiles/clients/map:
+    get:
+      tags:
+        - Profiles
+
+      summary: Get clients for map
+
+      responses:
+        "200":
+          description: List of clients with location
+
+  # =========================================================
+  # MARKETPLACE - ROOT
+  # =========================================================
+
+  /api/marketplace/:
+    get:
+      tags:
+        - Marketplace
+
+      summary: Marketplace root (public services list)
+
+      responses:
+        "200":
+          description: Marketplace root listing

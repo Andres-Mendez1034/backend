@@ -1,8 +1,39 @@
 import db from "../config/db.js";
 
-// ==========================
-// CREAR SERVICIO (INFLUENCER)
-// ==========================
+/* =========================================================
+   GET ALL SERVICES (MARKETPLACE)
+   — hace JOIN con creator_profiles para traer location e image
+========================================================= */
+export const getAllServices = async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT
+        s.service_id,
+        s.user_id,
+        s.influencer_name  AS title,
+        s.category         AS tag,
+        s.price,
+        s.status,
+        s.is_trending      AS trending,
+        cp.location,
+        cp.profile_image   AS image,
+        cp.bio
+      FROM influencer_services s
+      LEFT JOIN creator_profiles cp ON cp.user_id = s.user_id
+      ORDER BY s.service_id DESC
+    `);
+
+    return res.json(result.rows);
+
+  } catch (err) {
+    console.error("GET SERVICES ERROR:", err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+/* =========================================================
+   CREATE SERVICE
+========================================================= */
 export const createService = async (req, res) => {
   try {
     const {
@@ -10,26 +41,28 @@ export const createService = async (req, res) => {
       influencer_name,
       category,
       price,
+      status,
       is_trending,
-      status
     } = req.body;
 
-    if (!user_id || !influencer_name || !price) {
-      return res.status(400).json({ error: "Missing required fields" });
+    if (!user_id || !influencer_name) {
+      return res.status(400).json({
+        error: "Missing required fields: user_id, influencer_name"
+      });
     }
 
     const result = await db.query(
-      `INSERT INTO influencer_services 
-      (user_id, influencer_name, category, price, is_trending, status)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *`,
+      `INSERT INTO influencer_services
+        (user_id, influencer_name, category, price, status, is_trending)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       RETURNING *`,
       [
         user_id,
         influencer_name,
-        category,
-        price,
+        category  || null,
+        price     || 0,
+        status    || "available",
         is_trending || false,
-        status || "available"
       ]
     );
 
@@ -39,53 +72,57 @@ export const createService = async (req, res) => {
     });
 
   } catch (err) {
+    console.error("CREATE SERVICE ERROR:", err);
     return res.status(500).json({ error: err.message });
   }
 };
 
-// ==========================
-// OBTENER TODOS LOS SERVICIOS
-// ==========================
-export const getAllServices = async (req, res) => {
-  try {
-    const result = await db.query(
-      `SELECT * FROM influencer_services
-       ORDER BY service_id DESC`
-    );
-
-    return res.json(result.rows);
-
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-};
-
-// ==========================
-// SERVICIOS POR USUARIO
-// ==========================
+/* =========================================================
+   GET SERVICES BY USER
+========================================================= */
 export const getServicesByUser = async (req, res) => {
   try {
     const { user_id } = req.params;
 
     const result = await db.query(
-      `SELECT * FROM influencer_services
-       WHERE user_id = $1`,
+      `SELECT
+        s.service_id,
+        s.user_id,
+        s.influencer_name  AS title,
+        s.category         AS tag,
+        s.price,
+        s.status,
+        s.is_trending      AS trending,
+        cp.location,
+        cp.profile_image   AS image,
+        cp.bio
+       FROM influencer_services s
+       LEFT JOIN creator_profiles cp ON cp.user_id = s.user_id
+       WHERE s.user_id = $1
+       ORDER BY s.service_id DESC`,
       [user_id]
     );
 
     return res.json(result.rows);
 
   } catch (err) {
+    console.error("GET USER SERVICES ERROR:", err);
     return res.status(500).json({ error: err.message });
   }
 };
 
-// ==========================
-// UPDATE STATUS
-// ==========================
+/* =========================================================
+   UPDATE SERVICE STATUS
+========================================================= */
 export const updateServiceStatus = async (req, res) => {
   try {
     const { service_id, status } = req.body;
+
+    if (!service_id || !status) {
+      return res.status(400).json({
+        error: "Missing required fields: service_id, status"
+      });
+    }
 
     const result = await db.query(
       `UPDATE influencer_services
@@ -101,6 +138,7 @@ export const updateServiceStatus = async (req, res) => {
     });
 
   } catch (err) {
+    console.error("UPDATE SERVICE ERROR:", err);
     return res.status(500).json({ error: err.message });
   }
 };

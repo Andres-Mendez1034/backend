@@ -1,40 +1,27 @@
 import express from "express";
-
 import {
   createCheckoutSession,
+  createOfferCheckout,
   handleStripeWebhook,
-  getPaymentStatus
+  getPaymentStatus,
+  getMyOrders,
 } from "./payments.controller.js";
-
 import authMiddleware from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-/* =========================================================
-   CREATE STRIPE CHECKOUT SESSION
-========================================================= */
-router.post(
-  "/checkout/:service_id",
-  authMiddleware,
-  createCheckoutSession
-);
+// POST /api/payments/create-checkout/:service_id (optional)
+router.post("/create-checkout/:service_id?", authMiddleware, createCheckoutSession);
 
-/* =========================================================
-   STRIPE WEBHOOK
-========================================================= */
-router.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  handleStripeWebhook
-);
+// POST /api/payments/checkout-offer  ← nuevo (oferta negociada en chat)
+router.post("/checkout-offer", authMiddleware, createOfferCheckout);
 
-/* =========================================================
-   GET PAYMENT STATUS
-========================================================= */
-router.get(
-  "/status/:order_id",
-  authMiddleware,
-  getPaymentStatus
-);
+// POST /api/payments/webhook
+router.post("/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
+
+// GET /api/payments/status/:paymentId
+router.get("/status/:paymentId", authMiddleware, getPaymentStatus);
+router.get("/my-orders", authMiddleware, getMyOrders);
+
 
 export default router;

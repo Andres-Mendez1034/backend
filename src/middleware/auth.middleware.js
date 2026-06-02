@@ -1,8 +1,9 @@
+import jwt from "jsonwebtoken";
 import db from "../config/db.js";
 
-// ==========================
-// AUTH MIDDLEWARE
-// ==========================
+/* =========================================================
+   AUTH MIDDLEWARE (JWT + email_verified check)
+========================================================= */
 const authMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -13,30 +14,52 @@ const authMiddleware = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    if (!token) {
-      return res.status(401).json({ error: "Invalid token format" });
+    if (!token || token === "null" || token === "undefined") {
+      return res.status(401).json({ error: "Invalid token" });
     }
 
-    // ==========================
-    // TEMPORAL: token = user_id
-    // ==========================
-    const result = await db.query(
-      `SELECT * FROM users WHERE id = $1`,
-      [token]
+    // ── Verificar JWT ──
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // ── Verificar que el usuario existe y tiene email verificado ──
+    const { rows } = await db.query(
+      `SELECT id, email, role, email_verified FROM users WHERE id = $1`,
+      [decoded.id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: "Unauthorized user" });
+    const user = rows[0];
+
+    if (!user) {
+      return res.status(401).json({ error: "User not found" });
     }
 
-    req.user = result.rows[0];
+    if (!user.email_verified) {
+      return res.status(403).json({
+        error:   "EMAIL_NOT_VERIFIED",
+        message: "Debes verificar tu correo antes de continuar.",
+      });
+    }
+
+    req.user = {
+      id:    user.id,
+      email: user.email,
+      role:  user.role,
+    };
 
     next();
 
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    console.error("AUTH ERROR:", err.message);
+
+    if (err.name === "TokenExpiredError") {
+      return res.status(401).json({ error: "Token expired" });
+    }
+    if (err.name === "JsonWebTokenError") {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    return res.status(500).json({ error: "Internal auth error" });
   }
 };
 
-// ✅ IMPORTANTE: default export (lo que tu routes espera)
 export default authMiddleware;

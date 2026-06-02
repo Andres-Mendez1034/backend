@@ -17,63 +17,36 @@ import {
 const router = express.Router();
 
 /* =========================================================
+   GET ALL SERVICES (ruta raíz — la usa el frontend)
+========================================================= */
+router.get("/", getAllServices);
+
+/* =========================================================
    CREATE SERVICE
 ========================================================= */
-router.post(
-  "/service",
-  createService
-);
+router.post("/service", createService);
 
 /* =========================================================
    GET ALL SERVICES
 ========================================================= */
-router.get(
-  "/services",
-  getAllServices
-);
+router.get("/services", getAllServices);
 
 /* =========================================================
    GET SERVICES BY USER
 ========================================================= */
-router.get(
-  "/services/user/:user_id",
-  getServicesByUser
-);
+router.get("/services/user/:user_id", getServicesByUser);
 
 /* =========================================================
    UPDATE SERVICE STATUS
 ========================================================= */
-router.put(
-  "/service/status",
-  updateServiceStatus
-);
+router.put("/service/status", updateServiceStatus);
 
 /* =========================================================
    FULFILLMENT FLOW
 ========================================================= */
-
-/* GET FULFILLMENT */
-router.get(
-  "/fulfillment/:order_id",
-  getFulfillmentByOrder
-);
-
-/* ACCEPT ORDER */
-router.post(
-  "/fulfillment/accept",
-  acceptOrder
-);
-
-/* DELIVER SERVICE */
-router.post(
-  "/fulfillment/deliver",
-  deliverService
-);
-
-/* COMPLETE ORDER */
-router.post(
-  "/fulfillment/complete",
-  completeOrder
-);
+router.get("/fulfillment/:order_id", getFulfillmentByOrder);
+router.post("/fulfillment/accept", acceptOrder);
+router.post("/fulfillment/deliver", deliverService);
+router.post("/fulfillment/complete", completeOrder);
 
 export default router;
